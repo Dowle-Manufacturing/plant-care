@@ -133,23 +133,6 @@ async function askClaude(prompt) {
   return text;
 }
 
-async function fetchPlantImage(plantName, latinName) {
-  try {
-    const res = await fetch("/api/claude", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: "image_search",
-        plant: plantName,
-        latin: latinName,
-      }),
-    });
-    const data = await res.json();
-    return data.imageUrl || null;
-  } catch {
-    return null;
-  }
-}
 
 async function getPlantData(plantName) {
   const prompt = `You are a houseplant expert. For the houseplant "${plantName}" return ONLY a valid JSON object with no markdown, no explanation, just raw JSON.
