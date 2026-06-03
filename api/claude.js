@@ -3,16 +3,17 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // Image search
+  // ── Image search ─────────────────────────────────────────────
   if (req.body.type === "image_search") {
     try {
       const plantName = req.body.plant || "";
       const latinName = req.body.latin || "";
 
       const queries = [
-        `${plantName} houseplant potted indoor`,
-        `${latinName} plant`,
-        `${plantName} plant`,
+        `${plantName} single potted plant close up leaves`,
+        `${latinName} potted houseplant close up`,
+        `${plantName} indoor plant leaves detail`,
+        `${plantName} houseplant`,
       ];
 
       let bestPhoto = null;
@@ -32,7 +33,6 @@ export default async function handler(req, res) {
         const data = await response.json();
 
         if (data.results?.length > 0) {
-          const plantWords = plantName.toLowerCase().split(" ").filter(w => w.length > 3);
           let best = null;
           let bestScore = -1;
 
@@ -43,7 +43,18 @@ export default async function handler(req, res) {
               ...(photo.tags?.map(t => t.title) || []),
             ].join(" ").toLowerCase();
 
-            const score = plantWords.filter(word => searchText.includes(word)).length;
+            // Score based on plant name match
+            const plantWords = plantName.toLowerCase().split(" ").filter(w => w.length > 3);
+            let score = plantWords.filter(word => searchText.includes(word)).length * 3;
+
+            // Boost photos that suggest close-up single plant shots
+            const goodTerms = ["plant", "leaf", "leaves", "foliage", "potted", "houseplant", "indoor", "close", "detail", "green"];
+            score += goodTerms.filter(t => searchText.includes(t)).length;
+
+            // Penalise photos that suggest group shots or unrelated content
+            const badTerms = ["people", "person", "woman", "man", "food", "garden", "forest", "field", "flower market", "bouquet", "arrangement", "hands", "holding", "group", "collection"];
+            score -= badTerms.filter(t => searchText.includes(t)).length * 3;
+
             if (score > bestScore) { bestScore = score; best = photo; }
           }
 
@@ -54,7 +65,7 @@ export default async function handler(req, res) {
 
       if (bestPhoto) {
         return res.status(200).json({
-          imageUrl: `${bestPhoto.urls.raw}&w=120&h=120&fit=crop&auto=format`
+          imageUrl: `${bestPhoto.urls.raw}&w=120&h=120&fit=crop&crop=entropy&auto=format`
         });
       }
       return res.status(200).json({ imageUrl: null });
@@ -65,7 +76,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // Claude request
+  // ── Claude request ────────────────────────────────────────────
   try {
     if (!process.env.ANTHROPIC_API_KEY) {
       return res.status(500).json({ error: "Missing API key" });
