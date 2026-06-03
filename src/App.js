@@ -135,6 +135,34 @@ async function askClaude(prompt) {
   if (!text) throw new Error("Empty response");
   return text;
 }
+async function getPlantData(plantName) {
+  const prompt = `You are a houseplant expert. For "${plantName}" return ONLY a valid JSON object with no markdown, no explanation, just raw JSON.
+
+Return exactly this structure:
+{
+  "commonName": "display name for the plant",
+  "latinName": "scientific name",
+  "shortNote": "one short sentence about care highlight",
+  "imageUrl": "https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=120&h=120&fit=crop",
+  "wateringTasks": [
+    { "day": "Monday or Thursday or Saturday", "action": "specific watering instruction", "type": "water" }
+  ],
+  "mistingDays": [
+    { "day": "day of week", "note": "brief misting instruction" }
+  ],
+  "needsMisting": true
+}
+
+For wateringTasks add 1-2 tasks on Monday, Thursday, or Saturday only.
+For mistingDays use 2-4 days if it needs misting.`;
+
+  const raw = await askClaude(prompt);
+  const clean = raw.replace(/```json|```/g, "").trim();
+  const start = clean.indexOf("{");
+  const end   = clean.lastIndexOf("}");
+  if (start === -1 || end === -1) throw new Error("No JSON found");
+  return JSON.parse(clean.slice(start, end + 1));
+}
 // ── Sub-components ───────────────────────────────────────────────
 function PlantImg({ src, size = 56 }) {
   const [err, setErr] = useState(false);
