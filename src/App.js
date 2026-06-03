@@ -649,6 +649,7 @@ export default function App() {
     };
     const t = setTimeout(refresh, 1500);
     return () => { cancelled = true; clearTimeout(t); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plants]);
 
   const toggleWater = (day,idx) => setWaterChecked(prev=>{const d={...(prev[day]||{})};d[idx]=!d[idx];return{...prev,[day]:d};});
