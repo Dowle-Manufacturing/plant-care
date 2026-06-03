@@ -1,21 +1,22 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
-const DEFAULT_IMAGES = {
-  "Japanese Bird's Nest Fern": "https://images.unsplash.com/photo-1597305877032-0668b3c6413a?w=120&h=120&fit=crop",
-  "Bird's Nest Fern":          "https://images.unsplash.com/photo-1597305877032-0668b3c6413a?w=120&h=120&fit=crop",
-  "Asparagus Fern":            "https://images.unsplash.com/photo-1599598425947-5202edd56bdb?w=120&h=120&fit=crop",
-  "Calathea":                  "https://images.unsplash.com/photo-1598880940080-ff9a29891b85?w=120&h=120&fit=crop",
-  "Jade Plant":                "https://images.unsplash.com/photo-1509423350716-97f9360b4e09?w=120&h=120&fit=crop",
-  "Bird of Paradise":          "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=120&h=120&fit=crop",
-  "Spider Plant":              "https://images.unsplash.com/photo-1572688484438-313a6e50c333?w=120&h=120&fit=crop",
-  "Basil":                     "https://images.unsplash.com/photo-1618375569909-3c8616cf7733?w=120&h=120&fit=crop",
-  "Echeveria":                 "https://images.unsplash.com/photo-1459156212016-c812468e2115?w=120&h=120&fit=crop",
-  "Kangaroo Paw Fern":         "https://images.unsplash.com/photo-1597305877032-0668b3c6413a?w=120&h=120&fit=crop",
-  "Chinese Money Plant":       "https://images.unsplash.com/photo-1556909114-44e3e70034e2?w=120&h=120&fit=crop",
-  "Variegated Rubber Plant":   "https://images.unsplash.com/photo-1545241047-6083a3684587?w=120&h=120&fit=crop",
-  "Monstera":                  "https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=120&h=120&fit=crop",
-  "Maranta (Prayer Plant)":    "https://images.unsplash.com/photo-1598880940080-ff9a29891b85?w=120&h=120&fit=crop",
-  "Parlour Palm":              "https://images.unsplash.com/photo-1587334274328-64186a80aeee?w=120&h=120&fit=crop",
+// ── Fallback images (used until Wikipedia loads) ─────────────────
+const FALLBACK_IMAGES = {
+  "Japanese Bird's Nest Fern": "https://images.unsplash.com/photo-1597305877032-0668b3c6413a?w=300&h=300&fit=clip",
+  "Bird's Nest Fern":          "https://images.unsplash.com/photo-1597305877032-0668b3c6413a?w=300&h=300&fit=clip",
+  "Asparagus Fern":            "https://images.unsplash.com/photo-1599598425947-5202edd56bdb?w=300&h=300&fit=clip",
+  "Calathea":                  "https://images.unsplash.com/photo-1598880940080-ff9a29891b85?w=300&h=300&fit=clip",
+  "Jade Plant":                "https://images.unsplash.com/photo-1509423350716-97f9360b4e09?w=300&h=300&fit=clip",
+  "Bird of Paradise":          "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=clip",
+  "Spider Plant":              "https://images.unsplash.com/photo-1572688484438-313a6e50c333?w=300&h=300&fit=clip",
+  "Basil":                     "https://images.unsplash.com/photo-1618375569909-3c8616cf7733?w=300&h=300&fit=clip",
+  "Echeveria":                 "https://images.unsplash.com/photo-1459156212016-c812468e2115?w=300&h=300&fit=clip",
+  "Kangaroo Paw Fern":         "https://images.unsplash.com/photo-1597305877032-0668b3c6413a?w=300&h=300&fit=clip",
+  "Chinese Money Plant":       "https://images.unsplash.com/photo-1556909114-44e3e70034e2?w=300&h=300&fit=clip",
+  "Variegated Rubber Plant":   "https://images.unsplash.com/photo-1545241047-6083a3684587?w=300&h=300&fit=clip",
+  "Monstera":                  "https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=300&h=300&fit=clip",
+  "Maranta (Prayer Plant)":    "https://images.unsplash.com/photo-1598880940080-ff9a29891b85?w=300&h=300&fit=clip",
+  "Parlour Palm":              "https://images.unsplash.com/photo-1587334274328-64186a80aeee?w=300&h=300&fit=clip",
 };
 
 const DEFAULT_SCHEDULE = [
@@ -108,6 +109,9 @@ const monthlyNote = [
   "🔄 Rotate all windowsill plants for even light exposure",
 ];
 
+const STORAGE_PLANT_KEY  = "plant_collection_v2";
+const STORAGE_IMAGES_KEY = "plant_images_v2";
+
 function getWeekKey() {
   const now = new Date();
   const day = now.getDay();
@@ -116,34 +120,32 @@ function getWeekKey() {
   return `plantcare_${monday.getFullYear()}${String(monday.getMonth()+1).padStart(2,"0")}${String(monday.getDate()).padStart(2,"0")}`;
 }
 
-// ── Fetch a single plant image via the API route ─────────────────
+// ── localStorage helpers (no window.storage needed) ─────────────
+function lsGet(key) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; }
+}
+function lsSet(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+}
+
 async function searchPlantImage(plantKey, latinName) {
   try {
     const res = await fetch("/api/claude", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: "image_search",
-        plant: plantKey,
-        latin: latinName,
-      }),
+      body: JSON.stringify({ type: "image_search", plant: plantKey, latin: latinName }),
     });
     if (!res.ok) return null;
     const data = await res.json();
     return data.imageUrl || null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
-// ── Claude plant data lookup ──────────────────────────────────────
 async function askClaude(prompt) {
   const res = await fetch("/api/claude", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      messages: [{ role: "user", content: prompt }],
-    }),
+    body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }),
   });
   const data = await res.json();
   if (data.error) throw new Error(data.error.message);
@@ -180,13 +182,53 @@ For mistingDays use 2-4 days if it needs misting.`;
   return JSON.parse(clean.slice(start, end + 1));
 }
 
-// ── Sub-components ────────────────────────────────────────────────
-function PlantImg({ src, size = 56 }) {
-  const [err, setErr] = useState(false);
-  if (!src || err) return (
-    <div style={{ width: size, height: size, borderRadius: "0.5rem", background: "rgba(134,239,172,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size > 40 ? "1.4rem" : "1rem", flexShrink: 0, border: "1px solid rgba(134,239,172,0.12)" }}>🌿</div>
+// ── Image lightbox ────────────────────────────────────────────────
+function ImageLightbox({ src, name, onClose }) {
+  useEffect(() => {
+    const handler = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 200, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "1rem", cursor: "pointer" }}>
+      <div style={{ fontSize: "0.78rem", color: "rgba(134,239,172,0.6)", marginBottom: "0.8rem", letterSpacing: "0.1em" }}>{name}</div>
+      <img
+        src={src} alt={name}
+        onClick={e => e.stopPropagation()}
+        style={{ maxWidth: "90vw", maxHeight: "75vh", borderRadius: "0.8rem", objectFit: "contain", border: "1px solid rgba(134,239,172,0.2)", cursor: "default" }}
+      />
+      <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.3)", marginTop: "0.8rem" }}>Tap outside to close</div>
+    </div>
   );
-  return <img src={src} alt="" onError={() => setErr(true)} style={{ width: size, height: size, borderRadius: "0.5rem", objectFit: "cover", flexShrink: 0, border: "1px solid rgba(134,239,172,0.2)" }} />;
+}
+
+// ── Clickable plant image ─────────────────────────────────────────
+function PlantImg({ src, name, size = 56 }) {
+  const [err, setErr] = useState(false);
+  const [lightbox, setLightbox] = useState(false);
+
+  const imgSrc = (!src || err) ? null : src;
+
+  return (
+    <>
+      {lightbox && imgSrc && <ImageLightbox src={imgSrc} name={name || ""} onClose={() => setLightbox(false)} />}
+      <div
+        onClick={imgSrc ? () => setLightbox(true) : undefined}
+        style={{ width: size, height: size, borderRadius: "0.5rem", flexShrink: 0, cursor: imgSrc ? "pointer" : "default", position: "relative", overflow: "hidden" }}
+      >
+        {imgSrc ? (
+          <>
+            <img src={imgSrc} alt={name || ""} onError={() => setErr(true)}
+              style={{ width: "100%", height: "100%", objectFit: "cover", border: "1px solid rgba(134,239,172,0.2)", borderRadius: "0.5rem", display: "block" }} />
+            <div style={{ position: "absolute", bottom: 2, right: 2, background: "rgba(0,0,0,0.5)", borderRadius: "3px", padding: "1px 3px", fontSize: "0.5rem", color: "white", lineHeight: 1 }}>🔍</div>
+          </>
+        ) : (
+          <div style={{ width: "100%", height: "100%", background: "rgba(134,239,172,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size > 40 ? "1.4rem" : "1rem", border: "1px solid rgba(134,239,172,0.12)", borderRadius: "0.5rem" }}>🌿</div>
+        )}
+      </div>
+    </>
+  );
 }
 
 function Checkbox({ checked, onChange }) {
@@ -213,27 +255,22 @@ function AddPlantModal({ onClose, onAdd }) {
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
-  const steps = ["Searching for plant info...","Looking up care requirements...","Finding a photo...","Building your schedule entries..."];
+  const steps = ["Searching for plant info...","Looking up care requirements...","Finding a Wikipedia photo...","Building your schedule entries..."];
 
   useEffect(() => {
     if (status !== "loading") { setStepIdx(0); return; }
-    const stepsLen = 4;
-    const t = setInterval(() => setStepIdx(i => (i + 1) % stepsLen), 1200);
+    const t = setInterval(() => setStepIdx(i => (i + 1) % 4), 1200);
     return () => clearInterval(t);
   }, [status]);
 
   const search = async () => {
     if (!query.trim()) return;
-    setStatus("loading");
-    setResult(null);
-    setErrMsg("");
+    setStatus("loading"); setResult(null); setErrMsg("");
     try {
       const data = await getPlantData(query.trim());
-      // Fetch image separately via Unsplash
       const imageUrl = await searchPlantImage(data.commonName, data.latinName);
       data.imageUrl = imageUrl;
-      setResult(data);
-      setStatus("success");
+      setResult(data); setStatus("success");
     } catch (e) {
       setErrMsg(`Could not find plant: ${e.message}`);
       setStatus("error");
@@ -268,7 +305,7 @@ function AddPlantModal({ onClose, onAdd }) {
           <div>
             <div style={{ background: "rgba(22,163,74,0.08)", border: "1px solid rgba(74,222,128,0.2)", borderRadius: "0.8rem", padding: "1rem", marginBottom: "1rem" }}>
               <div style={{ display: "flex", gap: "0.8rem", alignItems: "center", marginBottom: "0.8rem" }}>
-                <PlantImg src={result.imageUrl} size={60} />
+                <PlantImg src={result.imageUrl} name={result.commonName} size={60} />
                 <div>
                   <div style={{ fontSize: "0.95rem", fontWeight: "600", color: "#86efac" }}>{result.commonName}</div>
                   <div style={{ fontSize: "0.72rem", color: "rgba(134,239,172,0.5)", fontStyle: "italic" }}>{result.latinName}</div>
@@ -276,7 +313,7 @@ function AddPlantModal({ onClose, onAdd }) {
                 </div>
               </div>
               <div style={{ marginBottom: "0.6rem" }}>
-                <div style={{ fontSize: "0.68rem", color: "rgba(134,239,172,0.4)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.3rem" }}>Will be added to watering schedule:</div>
+                <div style={{ fontSize: "0.68rem", color: "rgba(134,239,172,0.4)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.3rem" }}>Watering schedule:</div>
                 {result.wateringTasks?.map((t, i) => (
                   <div key={i} style={{ fontSize: "0.76rem", color: "rgba(232,245,233,0.65)", padding: "0.2rem 0" }}>
                     💧 <strong style={{ color: "#86efac" }}>{t.day}:</strong> {t.action}
@@ -285,7 +322,7 @@ function AddPlantModal({ onClose, onAdd }) {
               </div>
               {result.needsMisting && result.mistingDays?.length > 0 && (
                 <div>
-                  <div style={{ fontSize: "0.68rem", color: "rgba(134,239,172,0.4)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.3rem" }}>Will be added to misting schedule:</div>
+                  <div style={{ fontSize: "0.68rem", color: "rgba(134,239,172,0.4)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.3rem" }}>Misting schedule:</div>
                   {result.mistingDays.map((m, i) => (
                     <div key={i} style={{ fontSize: "0.76rem", color: "rgba(232,245,233,0.65)", padding: "0.2rem 0" }}>
                       🌫️ <strong style={{ color: "#86efac" }}>{m.day}:</strong> {m.note}
@@ -313,88 +350,64 @@ export default function App() {
   const [showAdd,       setShowAdd]       = useState(false);
   const [imgRefreshing, setImgRefreshing] = useState(false);
 
-  const [plantImages,  setPlantImages]  = useState({ ...DEFAULT_IMAGES });
-  const [schedule,     setSchedule]     = useState(DEFAULT_SCHEDULE);
-  const [mistingData,  setMistingData]  = useState(DEFAULT_MISTING);
-  const [plantList,    setPlantList]    = useState(DEFAULT_PLANT_LIST);
-  const [waterChecked, setWaterChecked] = useState({});
-  const [mistChecked,  setMistChecked]  = useState({});
+  // ── State — load from localStorage immediately ──────────────────
+  const [plantImages,  setPlantImages]  = useState(() => lsGet(STORAGE_IMAGES_KEY) || { ...FALLBACK_IMAGES });
+  const [schedule,     setSchedule]     = useState(() => { const d = lsGet(STORAGE_PLANT_KEY); return d?.schedule || DEFAULT_SCHEDULE; });
+  const [mistingData,  setMistingData]  = useState(() => { const d = lsGet(STORAGE_PLANT_KEY); return d?.misting  || DEFAULT_MISTING;  });
+  const [plantList,    setPlantList]    = useState(() => { const d = lsGet(STORAGE_PLANT_KEY); return d?.plants   || DEFAULT_PLANT_LIST; });
+  const [waterChecked, setWaterChecked] = useState(() => { const d = lsGet(getWeekKey()); return d?.water || {}; });
+  const [mistChecked,  setMistChecked]  = useState(() => { const d = lsGet(getWeekKey()); return d?.mist  || {}; });
 
-  // ── Load saved data from storage ────────────────────────────────
+  // ── Persist plant collection whenever it changes ────────────────
+  useEffect(() => {
+    lsSet(STORAGE_PLANT_KEY, { schedule, misting: mistingData, plants: plantList });
+  }, [schedule, mistingData, plantList]);
+
+  // ── Persist images whenever they change ─────────────────────────
+  useEffect(() => {
+    lsSet(STORAGE_IMAGES_KEY, plantImages);
+  }, [plantImages]);
+
+  // ── Persist check state weekly ───────────────────────────────────
   useEffect(() => {
     const key = getWeekKey();
     setWeekKey(key);
-    if (!window.storage) return;
-    window.storage.get(key).then(r => {
-      if (r?.value) { try { const s = JSON.parse(r.value); if (s.water) setWaterChecked(s.water); if (s.mist) setMistChecked(s.mist); } catch {} }
-    }).catch(() => {});
-    window.storage.get("plant_data").then(r => {
-      if (r?.value) {
-        try {
-          const d = JSON.parse(r.value);
-          if (d.images)   setPlantImages(d.images);
-          if (d.schedule) setSchedule(d.schedule);
-          if (d.misting)  setMistingData(d.misting);
-          if (d.plants)   setPlantList(d.plants);
-        } catch {}
-      }
-    }).catch(() => {});
-  }, []);
+    lsSet(key, { water: waterChecked, mist: mistChecked });
+  }, [waterChecked, mistChecked]);
 
-  // ── Refresh all plant images on mount ───────────────────────────
+  // ── Refresh all images from Wikipedia on mount ──────────────────
   useEffect(() => {
     let cancelled = false;
 
     const refreshAllImages = async () => {
       setImgRefreshing(true);
-      const freshImages = {};
+      const currentList = lsGet(STORAGE_PLANT_KEY)?.plants || DEFAULT_PLANT_LIST;
 
-      for (const plant of DEFAULT_PLANT_LIST) {
+      for (const plant of currentList) {
         if (cancelled) break;
         try {
           const url = await searchPlantImage(plant.key, plant.latin);
           if (url && !cancelled) {
-            freshImages[plant.key] = url;
-            // Update images one by one as they arrive
-            setPlantImages(prev => ({ ...prev, [plant.key]: url }));
+            setPlantImages(prev => {
+              const updated = { ...prev, [plant.key]: url };
+              lsSet(STORAGE_IMAGES_KEY, updated);
+              return updated;
+            });
           }
         } catch {}
-        // Stagger requests to avoid rate limiting
         await new Promise(r => setTimeout(r, 700));
-      }
-
-      if (!cancelled && Object.keys(freshImages).length > 0) {
-        // Persist the updated images
-        if (window.storage) {
-          window.storage.get("plant_data").then(r => {
-            const existing = r?.value ? JSON.parse(r.value) : {};
-            window.storage.set("plant_data", JSON.stringify({
-              ...existing,
-              images: { ...DEFAULT_IMAGES, ...freshImages },
-            })).catch(() => {});
-          }).catch(() => {});
-        }
       }
 
       if (!cancelled) setImgRefreshing(false);
     };
 
-    // Wait 1.5s for storage to load first, then refresh
-    const t = setTimeout(refreshAllImages, 1500);
+    const t = setTimeout(refreshAllImages, 1000);
     return () => { cancelled = true; clearTimeout(t); };
   }, []);
 
-  // ── Save check state ─────────────────────────────────────────────
-  useEffect(() => {
-    if (!window.storage) return;
-    if (!Object.keys(waterChecked).length && !Object.keys(mistChecked).length) return;
-    window.storage.set(weekKey, JSON.stringify({ water: waterChecked, mist: mistChecked })).catch(() => {});
-  }, [waterChecked, mistChecked, weekKey]);
-
-  const savePlantData = (imgs, sched, mist, plants) => {
-    if (!window.storage) return;
-    window.storage.set("plant_data", JSON.stringify({ images: imgs, schedule: sched, misting: mist, plants })).catch(() => {});
-  };
+  const savePlantCollection = useCallback((sched, mist, plants) => {
+    lsSet(STORAGE_PLANT_KEY, { schedule: sched, misting: mist, plants });
+  }, []);
 
   const toggleWater = (day, idx) => setWaterChecked(prev => { const d = { ...(prev[day]||{}) }; d[idx] = !d[idx]; return { ...prev, [day]: d }; });
   const toggleMist  = (day, idx) => setMistChecked(prev  => { const d = { ...(prev[day]||{}) }; d[idx] = !d[idx]; return { ...prev, [day]: d }; });
@@ -404,17 +417,17 @@ export default function App() {
 
   const resetAll = () => {
     setWaterChecked({}); setMistChecked({});
-    if (window.storage) window.storage.set(weekKey, JSON.stringify({ water: {}, mist: {} })).catch(() => {});
+    lsSet(weekKey, { water: {}, mist: {} });
   };
 
   const handleAddPlant = (data) => {
-    const name = data.commonName;
+    const name        = data.commonName;
     const newImages   = { ...plantImages, [name]: data.imageUrl };
     const newPlants   = [...plantList, { key: name, latin: data.latinName, note: data.shortNote }];
     const newSchedule = schedule.map(dayObj => {
-      const tasksForDay = (data.wateringTasks || []).filter(t => t.day === dayObj.day);
-      if (!tasksForDay.length) return dayObj;
-      return { ...dayObj, tasks: [...dayObj.tasks, ...tasksForDay.map(t => ({ plant: name, action: t.action, type: t.type || "water" }))] };
+      const tasks = (data.wateringTasks || []).filter(t => t.day === dayObj.day);
+      if (!tasks.length) return dayObj;
+      return { ...dayObj, tasks: [...dayObj.tasks, ...tasks.map(t => ({ plant: name, action: t.action, type: t.type || "water" }))] };
     });
     let newMisting = { ...mistingData };
     if (data.needsMisting && data.mistingDays?.length) {
@@ -424,7 +437,8 @@ export default function App() {
       });
     }
     setPlantImages(newImages); setPlantList(newPlants); setSchedule(newSchedule); setMistingData(newMisting);
-    savePlantData(newImages, newSchedule, newMisting, newPlants);
+    lsSet(STORAGE_IMAGES_KEY, newImages);
+    savePlantCollection(newSchedule, newMisting, newPlants);
     setShowAdd(false);
   };
 
@@ -434,7 +448,8 @@ export default function App() {
     const newSchedule = schedule.map(d => ({ ...d, tasks: d.tasks.filter(t => t.plant !== plantName) }));
     const newMisting  = Object.fromEntries(Object.entries(mistingData).map(([day, arr]) => [day, arr.filter(m => m.p !== plantName)]));
     setPlantList(newPlants); setPlantImages(newImages); setSchedule(newSchedule); setMistingData(newMisting);
-    savePlantData(newImages, newSchedule, newMisting, newPlants);
+    lsSet(STORAGE_IMAGES_KEY, newImages);
+    savePlantCollection(newSchedule, newMisting, newPlants);
   };
 
   const totalWater  = schedule.reduce((s,d) => s + d.tasks.length, 0);
@@ -455,7 +470,7 @@ export default function App() {
       <div style={{ background: "linear-gradient(180deg,rgba(255,255,255,0.04) 0%,transparent 100%)", borderBottom: "1px solid rgba(134,239,172,0.15)", padding: "1.5rem 1.5rem 1.2rem", textAlign: "center" }}>
         <div style={{ fontSize: "1.8rem", marginBottom: "0.3rem" }}>🌿</div>
         <h1 style={{ fontSize: "clamp(1.3rem,5vw,1.8rem)", fontWeight: "400", letterSpacing: "0.08em", color: "#86efac", margin: "0 0 0.5rem", textTransform: "uppercase" }}>Weekly Plant Care</h1>
-        {imgRefreshing && <div style={{ fontSize: "0.68rem", color: "rgba(134,239,172,0.4)", marginBottom: "0.4rem" }}>🌿 Refreshing plant images...</div>}
+        {imgRefreshing && <div style={{ fontSize: "0.68rem", color: "rgba(134,239,172,0.4)", marginBottom: "0.4rem" }}>🌿 Refreshing plant images from Wikipedia...</div>}
         <div style={{ maxWidth: "280px", margin: "0 auto" }}>
           {[{ label: "Watering", done: doneWater, total: totalWater, color: "#4ade80" }, { label: "Misting", done: doneMist, total: totalMist, color: "#67e8f9" }].map(({ label, done, total, color }) => (
             <div key={label} style={{ marginBottom: "0.4rem" }}>
@@ -531,7 +546,7 @@ export default function App() {
                     return (
                       <div key={i} onClick={() => toggleWater(d.day, i)} style={{ display: "flex", gap: "0.7rem", padding: "0.75rem", marginBottom: i < d.tasks.length-1 ? "0.4rem" : 0, background: isChecked ? "rgba(22,163,74,0.08)" : "rgba(255,255,255,0.03)", borderRadius: "0.6rem", border: `1px solid ${isChecked ? "rgba(74,222,128,0.3)" : "rgba(134,239,172,0.08)"}`, alignItems: "center", cursor: "pointer", transition: "all 0.2s ease", opacity: isChecked ? 0.7 : 1 }}>
                         <Checkbox checked={isChecked} onChange={() => toggleWater(d.day, i)} />
-                        <PlantImg src={getImg(task.plant)} size={40} />
+                        <PlantImg src={getImg(task.plant)} name={task.plant} size={40} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: "0.82rem", fontWeight: "600", color: isChecked ? "#4ade80" : "#86efac", marginBottom: "0.2rem", textDecoration: isChecked ? "line-through" : "none" }}>{task.plant}</div>
                           <div style={{ fontSize: "0.74rem", color: isChecked ? "rgba(232,245,233,0.35)" : "rgba(232,245,233,0.6)", lineHeight: "1.4" }}>{task.action}</div>
@@ -583,7 +598,7 @@ export default function App() {
                       return (
                         <div key={i} onClick={() => toggleMist(day, i)} style={{ display: "flex", alignItems: "center", gap: "0.7rem", padding: "0.45rem 0.3rem", borderBottom: i < plants.length-1 ? "1px solid rgba(134,239,172,0.05)" : "none", cursor: "pointer", opacity: isChecked ? 0.6 : 1, transition: "opacity 0.2s ease" }}>
                           <Checkbox checked={isChecked} onChange={() => toggleMist(day, i)} />
-                          <PlantImg src={getImg(p)} size={34} />
+                          <PlantImg src={getImg(p)} name={p} size={34} />
                           <div style={{ flex: 1 }}>
                             <div style={{ fontSize: "0.8rem", color: isChecked ? "#4ade80" : "#86efac", textDecoration: isChecked ? "line-through" : "none" }}>{p}</div>
                             <div style={{ fontSize: "0.7rem", color: "rgba(232,245,233,0.45)" }}>{n}</div>
@@ -609,13 +624,13 @@ export default function App() {
         {tab === "plants" && <>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.8rem" }}>
             <div style={{ fontSize: "0.72rem", color: "rgba(134,239,172,0.4)", letterSpacing: "0.12em", textTransform: "uppercase" }}>
-              Your collection · {plantList.length} plants {imgRefreshing && <span style={{ color: "rgba(134,239,172,0.3)" }}>· updating images...</span>}
+              Your collection · {plantList.length} plants {imgRefreshing && <span style={{ color: "rgba(134,239,172,0.3)" }}>· updating...</span>}
             </div>
             <button onClick={() => setShowAdd(true)} style={{ background: "linear-gradient(135deg,#16a34a,#15803d)", border: "none", borderRadius: "2rem", padding: "0.4rem 0.9rem", color: "white", cursor: "pointer", fontSize: "0.78rem", fontFamily: "inherit", fontWeight: "600" }}>+ Add Plant</button>
           </div>
           {plantList.map((plant, i) => (
             <div key={i} style={{ display: "flex", gap: "0.9rem", alignItems: "center", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(134,239,172,0.08)", borderRadius: "0.7rem", padding: "0.7rem", marginBottom: "0.5rem" }}>
-              <PlantImg src={getImg(plant.key)} size={64} />
+              <PlantImg src={getImg(plant.key)} name={plant.key} size={64} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: "0.85rem", fontWeight: "600", color: "#86efac", marginBottom: "0.15rem" }}>{plant.key}</div>
                 <div style={{ fontSize: "0.7rem", color: "rgba(134,239,172,0.4)", fontStyle: "italic", marginBottom: "0.2rem" }}>{plant.latin}</div>
