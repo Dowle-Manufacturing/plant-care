@@ -103,45 +103,55 @@ export default async function handler(req, res) {
   }
 
   // ── Read shared collection from Upstash ──────────────────────
-  if (body.type === "read_collection") {
-    try {
-      const url   = process.env.UPSTASH_REDIS_REST_URL;
-      const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-      if (!url || !token) return res.status(200).json({ collection: null });
-      const r = await fetch(`${url}/get/plant_collection`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await r.json();
-      const collection = data.result ? JSON.parse(data.result) : null;
-      return res.status(200).json({ collection });
-    } catch (err) {
-      console.error("Read collection error:", err.message);
-      return res.status(200).json({ collection: null });
+if (body.type === "read_collection") {
+  try {
+    const url   = process.env.UPSTASH_REDIS_REST_URL;
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+    if (!url || !token) return res.status(200).json({ collection: null });
+    const r = await fetch(`${url}/get/plant_collection`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await r.json();
+    const raw = data.result;
+    let collection = null;
+    if (raw) {
+      let parsed = raw;
+      let attempts = 0;
+      while (typeof parsed === "string" && attempts < 10) {
+        try { parsed = JSON.parse(parsed); attempts++; }
+        catch { break; }
+      }
+      collection = typeof parsed === "object" ? parsed : null;
     }
+    return res.status(200).json({ collection });
+  } catch (err) {
+    console.error("Read collection error:", err.message);
+    return res.status(200).json({ collection: null });
   }
-
+}
   // ── Write shared collection to Upstash ────────────────────────
-  if (body.type === "write_collection") {
-    try {
-      const url   = process.env.UPSTASH_REDIS_REST_URL;
-      const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-      if (!url || !token) return res.status(200).json({ ok: false });
-      const payload = JSON.stringify(body.collection);
-      await fetch(`${url}/set/plant_collection`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify([payload]),
-      });
-      return res.status(200).json({ ok: true });
-    } catch (err) {
-      console.error("Write collection error:", err.message);
-      return res.status(200).json({ ok: false });
-    }
+if (body.type === "write_collection") {
+  try {
+    const url   = process.env.UPSTASH_REDIS_REST_URL;
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+    if (!url || !token) return res.status(200).json({ ok: false });
+    const payload = typeof body.collection === "string"
+      ? body.collection
+      : JSON.stringify(body.collection);
+    await fetch(`${url}/set/plant_collection`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify([payload]),
+    });
+    return res.status(200).json({ ok: true });
+  } catch (err) {
+    console.error("Write collection error:", err.message);
+    return res.status(200).json({ ok: false });
   }
-
+}
   // ── Claude AI request ─────────────────────────────────────────
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY;

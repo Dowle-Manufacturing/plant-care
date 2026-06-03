@@ -39,8 +39,27 @@ function getWeekKey() {
   return `${STORAGE_WEEK_PREFIX}${monday.getFullYear()}${String(monday.getMonth()+1).padStart(2,"0")}${String(monday.getDate()).padStart(2,"0")}`;
 }
 
-function lsGet(key) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; } }
-function lsSet(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} }
+function lsGet(key) {
+  try {
+    const v = localStorage.getItem(key);
+    if (!v) return null;
+    // Handle double-stringified data by parsing until we get an object
+    let result = v;
+    let attempts = 0;
+    while (typeof result === "string" && attempts < 10) {
+      try { result = JSON.parse(result); attempts++; }
+      catch { break; }
+    }
+    return typeof result === "object" ? result : null;
+  } catch { return null; }
+}
+function lsSet(key, value) {
+  try {
+    // Always store as a single level of JSON
+    const toStore = typeof value === "string" ? value : JSON.stringify(value);
+    localStorage.setItem(key, toStore);
+  } catch {}
+}
 
 // ── API helpers ───────────────────────────────────────────────────
 async function callClaude(messages) {
@@ -77,11 +96,16 @@ async function readSharedCollection() {
 
 async function writeSharedCollection(collection) {
   try {
-    await fetch("/api/claude", {
+    console.log("Writing to Upstash, plants:", collection?.plants?.length);
+    const res = await fetch("/api/claude", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type: "write_collection", collection }),
     });
-  } catch {}
+    const data = await res.json();
+    console.log("Upstash write result:", JSON.stringify(data));
+  } catch(e) {
+    console.error("writeSharedCollection error:", e.message);
+  }
 }
 
 async function getPlantData(plantName) {
