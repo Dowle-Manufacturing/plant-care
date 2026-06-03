@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
-const plantImages = {
+// ── Default plant images (Unsplash) ─────────────────────────────
+const DEFAULT_IMAGES = {
   "Japanese Bird's Nest Fern": "https://images.unsplash.com/photo-1597305877032-0668b3c6413a?w=120&h=120&fit=crop",
   "Bird's Nest Fern":          "https://images.unsplash.com/photo-1597305877032-0668b3c6413a?w=120&h=120&fit=crop",
   "Asparagus Fern":            "https://images.unsplash.com/photo-1599598425947-5202edd56bdb?w=120&h=120&fit=crop",
@@ -16,11 +17,10 @@ const plantImages = {
   "Monstera":                  "https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=120&h=120&fit=crop",
   "Maranta (Prayer Plant)":    "https://images.unsplash.com/photo-1598880940080-ff9a29891b85?w=120&h=120&fit=crop",
   "Parlour Palm":              "https://images.unsplash.com/photo-1587334274328-64186a80aeee?w=120&h=120&fit=crop",
-  "All pebble trays": null,
-  "All plants": null,
 };
 
-const schedule = [
+// ── Default schedule ─────────────────────────────────────────────
+const DEFAULT_SCHEDULE = [
   {
     day: "Monday", subtitle: "Tropical & Humidity Lovers",
     tasks: [
@@ -65,32 +65,32 @@ const schedule = [
   },
 ];
 
-const mistingSchedule = {
-  Monday:    [{ p: "Asparagus Fern",            n: "Mist freely all over"                    }, { p: "Kangaroo Paw Fern",         n: "Mist around the fronds"              }, { p: "Calathea",          n: "Mist around plant, not on leaves" }, { p: "Maranta (Prayer Plant)", n: "Mist around plant, not on leaves" }],
-  Tuesday:   [{ p: "Japanese Bird's Nest Fern", n: "Mist around only — never into crown"     }, { p: "Bird's Nest Fern",          n: "Mist around only — never into crown"  }, { p: "Parlour Palm",      n: "Mist the fronds freely"           }],
-  Wednesday: [{ p: "Asparagus Fern",            n: "Mist freely all over"                    }, { p: "Kangaroo Paw Fern",         n: "Mist around the fronds"              }, { p: "Spider Plant",      n: "Light mist around the plant"      }],
-  Thursday:  [{ p: "Calathea",                  n: "Mist around plant only"                  }, { p: "Maranta (Prayer Plant)",    n: "Mist around plant only"              }, { p: "Monstera",          n: "Mist the moss poles"              }, { p: "Parlour Palm", n: "Mist the fronds" }],
-  Friday:    [{ p: "Japanese Bird's Nest Fern", n: "Mist around only — never into crown"     }, { p: "Bird's Nest Fern",          n: "Mist around only — never into crown"  }, { p: "Asparagus Fern",   n: "Mist freely all over"             }, { p: "Kangaroo Paw Fern", n: "Mist around the fronds" }],
-  Saturday:  [{ p: "Monstera",                  n: "Mist the moss poles"                     }, { p: "Parlour Palm",              n: "Mist the fronds"                     }],
-  Sunday:    [{ p: "Calathea",                  n: "Mist around plant only"                  }, { p: "Maranta (Prayer Plant)",    n: "Mist around plant only"              }, { p: "Asparagus Fern",   n: "Light mist all over"              }],
+const DEFAULT_MISTING = {
+  Monday:    [{ p: "Asparagus Fern", n: "Mist freely all over" }, { p: "Kangaroo Paw Fern", n: "Mist around the fronds" }, { p: "Calathea", n: "Mist around plant, not on leaves" }, { p: "Maranta (Prayer Plant)", n: "Mist around plant, not on leaves" }],
+  Tuesday:   [{ p: "Japanese Bird's Nest Fern", n: "Mist around only — never into crown" }, { p: "Bird's Nest Fern", n: "Mist around only — never into crown" }, { p: "Parlour Palm", n: "Mist the fronds freely" }],
+  Wednesday: [{ p: "Asparagus Fern", n: "Mist freely all over" }, { p: "Kangaroo Paw Fern", n: "Mist around the fronds" }, { p: "Spider Plant", n: "Light mist around the plant" }],
+  Thursday:  [{ p: "Calathea", n: "Mist around plant only" }, { p: "Maranta (Prayer Plant)", n: "Mist around plant only" }, { p: "Monstera", n: "Mist the moss poles" }, { p: "Parlour Palm", n: "Mist the fronds" }],
+  Friday:    [{ p: "Japanese Bird's Nest Fern", n: "Mist around only — never into crown" }, { p: "Bird's Nest Fern", n: "Mist around only — never into crown" }, { p: "Asparagus Fern", n: "Mist freely all over" }, { p: "Kangaroo Paw Fern", n: "Mist around the fronds" }],
+  Saturday:  [{ p: "Monstera", n: "Mist the moss poles" }, { p: "Parlour Palm", n: "Mist the fronds" }],
+  Sunday:    [{ p: "Calathea", n: "Mist around plant only" }, { p: "Maranta (Prayer Plant)", n: "Mist around plant only" }, { p: "Asparagus Fern", n: "Light mist all over" }],
 };
 
-const plantList = [
-  { key: "Japanese Bird's Nest Fern", latin: "Asplenium antiquum",       note: "Wavy fronds — fussy about humidity"         },
-  { key: "Bird's Nest Fern",          latin: "Asplenium nidus",          note: "Flat glossy fronds — healthier of the two"  },
-  { key: "Asparagus Fern",            latin: "Asparagus setaceus",       note: "Feathery & cloud-like — toxic to pets"      },
-  { key: "Calathea",                  latin: "Calathea ornata",          note: "Pink stripes — needs filtered water"        },
-  { key: "Jade Plant",                latin: "Crassula ovata",           note: "Currently stressed — needs sun & less water"},
-  { key: "Bird of Paradise",          latin: "Strelitzia reginae",       note: "Young plant — watch drainage in tin pot"    },
-  { key: "Spider Plant",              latin: "Chlorophytum comosum",     note: "Near radiator — move if possible"           },
-  { key: "Basil",                     latin: "Ocimum basilicum",         note: "Pinch flowers to keep leaves sweet"         },
-  { key: "Echeveria",                 latin: "Echeveria sp.",            note: "Slow-growing — stays small naturally"       },
-  { key: "Kangaroo Paw Fern",         latin: "Microsorum diversifolium", note: "In the amazing face pot 😄"                 },
-  { key: "Chinese Money Plant",       latin: "Pilea peperomioides",      note: "Rotate weekly for even growth"              },
-  { key: "Variegated Rubber Plant",   latin: "Ficus elastica 'Tineke'",  note: "Wipe leaves — never mist"                  },
-  { key: "Monstera",                  latin: "Monstera deliciosa",       note: "You have two! Keep moss poles damp"         },
-  { key: "Maranta (Prayer Plant)",    latin: "Maranta leuconeura",       note: "Move from fireplace — pet safe ✅"           },
-  { key: "Parlour Palm",              latin: "Chamaedorea elegans",      note: "Move away from radiator urgently"           },
+const DEFAULT_PLANT_LIST = [
+  { key: "Japanese Bird's Nest Fern", latin: "Asplenium antiquum",       note: "Wavy fronds — fussy about humidity"          },
+  { key: "Bird's Nest Fern",          latin: "Asplenium nidus",          note: "Flat glossy fronds — healthier of the two"   },
+  { key: "Asparagus Fern",            latin: "Asparagus setaceus",       note: "Feathery & cloud-like — toxic to pets"       },
+  { key: "Calathea",                  latin: "Calathea ornata",          note: "Pink stripes — needs filtered water"         },
+  { key: "Jade Plant",                latin: "Crassula ovata",           note: "Currently stressed — needs sun & less water" },
+  { key: "Bird of Paradise",          latin: "Strelitzia reginae",       note: "Young plant — watch drainage in tin pot"     },
+  { key: "Spider Plant",              latin: "Chlorophytum comosum",     note: "Near radiator — move if possible"            },
+  { key: "Basil",                     latin: "Ocimum basilicum",         note: "Pinch flowers to keep leaves sweet"          },
+  { key: "Echeveria",                 latin: "Echeveria sp.",            note: "Slow-growing — stays small naturally"        },
+  { key: "Kangaroo Paw Fern",         latin: "Microsorum diversifolium", note: "In the amazing face pot 😄"                  },
+  { key: "Chinese Money Plant",       latin: "Pilea peperomioides",      note: "Rotate weekly for even growth"               },
+  { key: "Variegated Rubber Plant",   latin: "Ficus elastica 'Tineke'",  note: "Wipe leaves — never mist"                   },
+  { key: "Monstera",                  latin: "Monstera deliciosa",       note: "You have two! Keep moss poles damp"          },
+  { key: "Maranta (Prayer Plant)",    latin: "Maranta leuconeura",       note: "Move from fireplace — pet safe ✅"            },
+  { key: "Parlour Palm",              latin: "Chamaedorea elegans",      note: "Move away from radiator urgently"            },
 ];
 
 const typeColors = {
@@ -101,6 +101,8 @@ const typeColors = {
   check:    { bg: "#fdf4ff", text: "#7e22ce", icon: "🔍" },
 };
 
+const ALL_DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+
 const monthlyNote = [
   "🌱 Feed all actively growing plants with diluted liquid fertiliser (spring & summer only)",
   "🪴 Check if any plants need repotting — especially Monstera and Bird of Paradise",
@@ -108,25 +110,64 @@ const monthlyNote = [
   "🔄 Rotate all windowsill plants for even light exposure",
 ];
 
-const ALL_DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
-
-// ── Week key: resets every Monday ───────────────────────────────
 function getWeekKey() {
   const now = new Date();
-  // Get Monday of current week
-  const day = now.getDay(); // 0=Sun … 6=Sat
+  const day = now.getDay();
   const monday = new Date(now);
   monday.setDate(now.getDate() - ((day + 6) % 7));
-  const y = monday.getFullYear();
-  const m = String(monday.getMonth() + 1).padStart(2, "0");
-  const d = String(monday.getDate()).padStart(2, "0");
-  return `plantcare_${y}${m}${d}`;
+  return `plantcare_${monday.getFullYear()}${String(monday.getMonth()+1).padStart(2,"0")}${String(monday.getDate()).padStart(2,"0")}`;
+}
+
+// ── Claude API call ──────────────────────────────────────────────
+async function askClaude(prompt) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1000,
+      tools: [{ type: "web_search_20250305", name: "web_search" }],
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+  const data = await res.json();
+  const text = data.content.filter(b => b.type === "text").map(b => b.text).join("");
+  return text;
+}
+
+async function getPlantData(plantName) {
+  const prompt = `You are a houseplant expert. Look up "${plantName}" and return ONLY a valid JSON object with no markdown, no explanation, just raw JSON.
+
+Return exactly this structure:
+{
+  "commonName": "display name for the plant",
+  "latinName": "scientific name",
+  "shortNote": "one short sentence about care highlight",
+  "imageUrl": "a direct working image URL ending in .jpg or .png from unsplash.com using format https://images.unsplash.com/photo-XXXXXXXXXX?w=120&h=120&fit=crop",
+  "wateringTasks": [
+    { "day": "Monday or Thursday or Saturday", "action": "specific watering instruction", "type": "water or mist or humidity or check or wipe" }
+  ],
+  "mistingDays": [
+    { "day": "day of week", "note": "brief misting instruction" }
+  ],
+  "needsMisting": true or false
+}
+
+For wateringTasks, add 1-2 tasks spread across Monday, Thursday, or Saturday only.
+For mistingDays, use any day of the week, 2-4 days if it needs misting.
+For the imageUrl, use a real Unsplash photo URL for this specific plant.`;
+
+  const raw = await askClaude(prompt);
+  const clean = raw.replace(/```json|```/g, "").trim();
+  const start = clean.indexOf("{");
+  const end   = clean.lastIndexOf("}");
+  if (start === -1 || end === -1) throw new Error("No JSON found");
+  return JSON.parse(clean.slice(start, end + 1));
 }
 
 // ── Sub-components ───────────────────────────────────────────────
-function PlantImg({ plantKey, size = 56 }) {
+function PlantImg({ src, size = 56 }) {
   const [err, setErr] = useState(false);
-  const src = plantImages[plantKey === "Monstera (x2)" ? "Monstera" : plantKey];
   if (!src || err) return (
     <div style={{ width: size, height: size, borderRadius: "0.5rem", background: "rgba(134,239,172,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size > 40 ? "1.4rem" : "1rem", flexShrink: 0, border: "1px solid rgba(134,239,172,0.12)" }}>🌿</div>
   );
@@ -139,108 +180,283 @@ function Checkbox({ checked, onChange }) {
       width: 24, height: 24, borderRadius: "6px", flexShrink: 0, cursor: "pointer",
       border: checked ? "2px solid #4ade80" : "2px solid rgba(134,239,172,0.3)",
       background: checked ? "linear-gradient(135deg,#16a34a,#15803d)" : "rgba(255,255,255,0.04)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      transition: "all 0.2s ease",
+      display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s ease",
     }}>
       {checked && <span style={{ color: "white", fontSize: "14px", lineHeight: 1 }}>✓</span>}
     </div>
   );
 }
 
-// ── Main app ─────────────────────────────────────────────────────
-export default function App() {
-  const [tab, setTab]           = useState("schedule");
-  const [activeDay, setActiveDay] = useState(0);
-  const [weekKey, setWeekKey]   = useState(getWeekKey());
+// ── Add Plant Modal ──────────────────────────────────────────────
+function AddPlantModal({ onClose, onAdd }) {
+  const [query,    setQuery]    = useState("");
+  const [status,   setStatus]   = useState("idle"); // idle | loading | success | error
+  const [result,   setResult]   = useState(null);
+  const [errMsg,   setErrMsg]   = useState("");
+  const inputRef = useRef(null);
 
-  // Separate state for watering tasks and misting tasks
-  // waterChecked: { "Monday": { 0: true, ... }, ... }
-  // mistChecked:  { "Monday": { 0: true, ... }, ... }
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const search = async () => {
+    if (!query.trim()) return;
+    setStatus("loading");
+    setResult(null);
+    setErrMsg("");
+    try {
+      const data = await getPlantData(query.trim());
+      setResult(data);
+      setStatus("success");
+    } catch (e) {
+      setErrMsg("Couldn't find that plant. Try a different name or check spelling.");
+      setStatus("error");
+    }
+  };
+
+  const steps = [
+    "Searching the web for plant info...",
+    "Looking up care requirements...",
+    "Finding a photo...",
+    "Building your schedule entries...",
+  ];
+  const [stepIdx, setStepIdx] = useState(0);
+  useEffect(() => {
+    if (status !== "loading") { setStepIdx(0); return; }
+    const t = setInterval(() => setStepIdx(i => (i + 1) % steps.length), 1200);
+    return () => clearInterval(t);
+  }, [status]);
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+      <div style={{ background: "linear-gradient(135deg,#0d2318,#0a1a0f)", border: "1px solid rgba(134,239,172,0.2)", borderRadius: "1rem", padding: "1.5rem", width: "100%", maxWidth: "420px", maxHeight: "90vh", overflowY: "auto" }}>
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.2rem" }}>
+          <h2 style={{ margin: 0, fontSize: "1.1rem", color: "#86efac", fontWeight: "400" }}>🌱 Add a New Plant</h2>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(134,239,172,0.5)", cursor: "pointer", fontSize: "1.3rem", lineHeight: 1 }}>×</button>
+        </div>
+
+        {/* Search bar */}
+        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && search()}
+            placeholder="e.g. Boston Fern, Peace Lily..."
+            style={{
+              flex: 1, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(134,239,172,0.2)",
+              borderRadius: "0.6rem", padding: "0.6rem 0.9rem", color: "#e8f5e9", fontSize: "0.85rem",
+              fontFamily: "inherit", outline: "none",
+            }}
+          />
+          <button onClick={search} disabled={status === "loading"} style={{
+            background: "linear-gradient(135deg,#16a34a,#15803d)", border: "none", borderRadius: "0.6rem",
+            padding: "0.6rem 1rem", color: "white", cursor: "pointer", fontSize: "0.85rem", fontFamily: "inherit",
+            opacity: status === "loading" ? 0.6 : 1,
+          }}>
+            {status === "loading" ? "..." : "Search"}
+          </button>
+        </div>
+
+        {/* Loading state */}
+        {status === "loading" && (
+          <div style={{ textAlign: "center", padding: "1.5rem", color: "rgba(134,239,172,0.6)", fontSize: "0.82rem" }}>
+            <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem", animation: "spin 2s linear infinite" }}>🌿</div>
+            <div>{steps[stepIdx]}</div>
+            <style>{`@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
+          </div>
+        )}
+
+        {/* Error */}
+        {status === "error" && (
+          <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "0.6rem", padding: "0.8rem", color: "rgba(252,165,165,0.8)", fontSize: "0.8rem" }}>
+            {errMsg}
+          </div>
+        )}
+
+        {/* Result preview */}
+        {status === "success" && result && (
+          <div>
+            <div style={{ background: "rgba(22,163,74,0.08)", border: "1px solid rgba(74,222,128,0.2)", borderRadius: "0.8rem", padding: "1rem", marginBottom: "1rem" }}>
+              <div style={{ display: "flex", gap: "0.8rem", alignItems: "center", marginBottom: "0.8rem" }}>
+                <PlantImg src={result.imageUrl} size={60} />
+                <div>
+                  <div style={{ fontSize: "0.95rem", fontWeight: "600", color: "#86efac" }}>{result.commonName}</div>
+                  <div style={{ fontSize: "0.72rem", color: "rgba(134,239,172,0.5)", fontStyle: "italic" }}>{result.latinName}</div>
+                  <div style={{ fontSize: "0.74rem", color: "rgba(232,245,233,0.6)", marginTop: "0.2rem" }}>{result.shortNote}</div>
+                </div>
+              </div>
+
+              {/* Watering tasks preview */}
+              <div style={{ marginBottom: "0.6rem" }}>
+                <div style={{ fontSize: "0.68rem", color: "rgba(134,239,172,0.4)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.3rem" }}>Will be added to watering schedule:</div>
+                {result.wateringTasks?.map((t, i) => (
+                  <div key={i} style={{ fontSize: "0.76rem", color: "rgba(232,245,233,0.65)", padding: "0.2rem 0" }}>
+                    💧 <strong style={{ color: "#86efac" }}>{t.day}:</strong> {t.action}
+                  </div>
+                ))}
+              </div>
+
+              {/* Misting preview */}
+              {result.needsMisting && result.mistingDays?.length > 0 && (
+                <div>
+                  <div style={{ fontSize: "0.68rem", color: "rgba(134,239,172,0.4)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.3rem" }}>Will be added to misting schedule:</div>
+                  {result.mistingDays.map((m, i) => (
+                    <div key={i} style={{ fontSize: "0.76rem", color: "rgba(232,245,233,0.65)", padding: "0.2rem 0" }}>
+                      🌫️ <strong style={{ color: "#86efac" }}>{m.day}:</strong> {m.note}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button onClick={() => { setStatus("idle"); setResult(null); setQuery(""); }} style={{
+                flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(134,239,172,0.15)",
+                borderRadius: "0.6rem", padding: "0.7rem", color: "rgba(134,239,172,0.6)", cursor: "pointer", fontSize: "0.82rem", fontFamily: "inherit",
+              }}>Search again</button>
+              <button onClick={() => onAdd(result)} style={{
+                flex: 2, background: "linear-gradient(135deg,#16a34a,#15803d)", border: "none",
+                borderRadius: "0.6rem", padding: "0.7rem", color: "white", cursor: "pointer", fontSize: "0.82rem", fontFamily: "inherit", fontWeight: "600",
+              }}>✓ Add to my collection</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Main App ─────────────────────────────────────────────────────
+export default function App() {
+  const [tab,        setTab]        = useState("schedule");
+  const [activeDay,  setActiveDay]  = useState(0);
+  const [weekKey,    setWeekKey]    = useState(getWeekKey());
+  const [showAdd,    setShowAdd]    = useState(false);
+
+  // Dynamic data
+  const [plantImages,  setPlantImages]  = useState({ ...DEFAULT_IMAGES });
+  const [schedule,     setSchedule]     = useState(DEFAULT_SCHEDULE);
+  const [mistingData,  setMistingData]  = useState(DEFAULT_MISTING);
+  const [plantList,    setPlantList]    = useState(DEFAULT_PLANT_LIST);
+
+  // Checked state
   const [waterChecked, setWaterChecked] = useState({});
   const [mistChecked,  setMistChecked]  = useState({});
 
-  // ── Load from storage on mount, auto-reset if new week ─────────
+  // Load from storage
   useEffect(() => {
     const key = getWeekKey();
     setWeekKey(key);
-    if (window.storage) {
-      window.storage.get(key).then(result => {
-        if (result && result.value) {
-          try {
-            const saved = JSON.parse(result.value);
-            if (saved.water) setWaterChecked(saved.water);
-            if (saved.mist)  setMistChecked(saved.mist);
-          } catch {}
-        }
-      }).catch(() => {});
-    }
+    if (!window.storage) return;
+    // Load checks
+    window.storage.get(key).then(r => {
+      if (r?.value) { try { const s = JSON.parse(r.value); if (s.water) setWaterChecked(s.water); if (s.mist) setMistChecked(s.mist); } catch {} }
+    }).catch(() => {});
+    // Load plant data
+    window.storage.get("plant_data").then(r => {
+      if (r?.value) {
+        try {
+          const d = JSON.parse(r.value);
+          if (d.images)   setPlantImages(d.images);
+          if (d.schedule) setSchedule(d.schedule);
+          if (d.misting)  setMistingData(d.misting);
+          if (d.plants)   setPlantList(d.plants);
+        } catch {}
+      }
+    }).catch(() => {});
   }, []);
 
-  // ── Persist whenever state changes ─────────────────────────────
+  // Save checks
   useEffect(() => {
     if (!window.storage) return;
-    if (Object.keys(waterChecked).length === 0 && Object.keys(mistChecked).length === 0) return;
+    if (!Object.keys(waterChecked).length && !Object.keys(mistChecked).length) return;
     window.storage.set(weekKey, JSON.stringify({ water: waterChecked, mist: mistChecked })).catch(() => {});
   }, [waterChecked, mistChecked, weekKey]);
 
-  // ── Helpers ─────────────────────────────────────────────────────
-  const toggleWater = (day, idx) => setWaterChecked(prev => {
-    const d = { ...(prev[day] || {}) };
-    d[idx] = !d[idx];
-    return { ...prev, [day]: d };
-  });
-
-  const toggleMist = (day, idx) => setMistChecked(prev => {
-    const d = { ...(prev[day] || {}) };
-    d[idx] = !d[idx];
-    return { ...prev, [day]: d };
-  });
-
-  const isWaterDayComplete = (day) => {
-    const dayData = schedule.find(d => d.day === day);
-    if (!dayData) return false;
-    const dc = waterChecked[day] || {};
-    return dayData.tasks.every((_, i) => dc[i]);
+  // Save plant data
+  const savePlantData = (imgs, sched, mist, plants) => {
+    if (!window.storage) return;
+    window.storage.set("plant_data", JSON.stringify({ images: imgs, schedule: sched, misting: mist, plants })).catch(() => {});
   };
 
-  const isMistDayComplete = (day) => {
-    const plants = mistingSchedule[day];
-    if (!plants || plants.length === 0) return false;
-    const dc = mistChecked[day] || {};
-    return plants.every((_, i) => dc[i]);
-  };
+  const toggleWater = (day, idx) => setWaterChecked(prev => { const d = { ...(prev[day]||{}) }; d[idx] = !d[idx]; return { ...prev, [day]: d }; });
+  const toggleMist  = (day, idx) => setMistChecked(prev  => { const d = { ...(prev[day]||{}) }; d[idx] = !d[idx]; return { ...prev, [day]: d }; });
+
+  const isWaterDayComplete = (day) => { const dd = schedule.find(d => d.day === day); if (!dd) return false; const dc = waterChecked[day]||{}; return dd.tasks.every((_,i) => dc[i]); };
+  const isMistDayComplete  = (day) => { const pl = mistingData[day]; if (!pl?.length) return false; const dc = mistChecked[day]||{}; return pl.every((_,i) => dc[i]); };
 
   const resetAll = () => {
-    setWaterChecked({});
-    setMistChecked({});
-    if (window.storage) {
-      window.storage.set(weekKey, JSON.stringify({ water: {}, mist: {} })).catch(() => {});
-    }
+    setWaterChecked({}); setMistChecked({});
+    if (window.storage) window.storage.set(weekKey, JSON.stringify({ water: {}, mist: {} })).catch(() => {});
   };
 
-  // ── Progress calculations ────────────────────────────────────────
-  const totalWater    = schedule.reduce((s, d) => s + d.tasks.length, 0);
-  const doneWater     = schedule.reduce((s, d) => s + d.tasks.filter((_, i) => (waterChecked[d.day]||{})[i]).length, 0);
-  const totalMist     = ALL_DAYS.reduce((s, day) => s + (mistingSchedule[day]||[]).length, 0);
-  const doneMist      = ALL_DAYS.reduce((s, day) => s + (mistingSchedule[day]||[]).filter((_, i) => (mistChecked[day]||{})[i]).length, 0);
-  const totalAll      = totalWater + totalMist;
-  const doneAll       = doneWater  + doneMist;
-  const allComplete   = doneAll === totalAll;
+  // Add plant handler
+  const handleAddPlant = (data) => {
+    const name = data.commonName;
+
+    // Update images
+    const newImages = { ...plantImages, [name]: data.imageUrl };
+    setPlantImages(newImages);
+
+    // Update plant list
+    const newPlants = [...plantList, { key: name, latin: data.latinName, note: data.shortNote }];
+    setPlantList(newPlants);
+
+    // Update schedule — add watering tasks to appropriate days
+    const newSchedule = schedule.map(dayObj => {
+      const tasksForDay = (data.wateringTasks || []).filter(t => t.day === dayObj.day);
+      if (!tasksForDay.length) return dayObj;
+      return { ...dayObj, tasks: [...dayObj.tasks, ...tasksForDay.map(t => ({ plant: name, action: t.action, type: t.type || "water" }))] };
+    });
+    setSchedule(newSchedule);
+
+    // Update misting schedule
+    let newMisting = { ...mistingData };
+    if (data.needsMisting && data.mistingDays?.length) {
+      data.mistingDays.forEach(({ day, note }) => {
+        if (!ALL_DAYS.includes(day)) return;
+        newMisting[day] = [...(newMisting[day] || []), { p: name, n: note }];
+      });
+    }
+    setMistingData(newMisting);
+
+    savePlantData(newImages, newSchedule, newMisting, newPlants);
+    setShowAdd(false);
+  };
+
+  // Remove plant handler
+  const handleRemovePlant = (plantName) => {
+    const newPlants   = plantList.filter(p => p.key !== plantName);
+    const newImages   = { ...plantImages };
+    delete newImages[plantName];
+    const newSchedule = schedule.map(d => ({ ...d, tasks: d.tasks.filter(t => t.plant !== plantName) }));
+    const newMisting  = Object.fromEntries(Object.entries(mistingData).map(([day, arr]) => [day, arr.filter(m => m.p !== plantName)]));
+    setPlantList(newPlants); setPlantImages(newImages); setSchedule(newSchedule); setMistingData(newMisting);
+    savePlantData(newImages, newSchedule, newMisting, newPlants);
+  };
+
+  // Progress
+  const totalWater  = schedule.reduce((s,d) => s + d.tasks.length, 0);
+  const doneWater   = schedule.reduce((s,d) => s + d.tasks.filter((_,i) => (waterChecked[d.day]||{})[i]).length, 0);
+  const totalMist   = ALL_DAYS.reduce((s,day) => s + (mistingData[day]||[]).length, 0);
+  const doneMist    = ALL_DAYS.reduce((s,day) => s + (mistingData[day]||[]).filter((_,i) => (mistChecked[day]||{})[i]).length, 0);
+  const doneAll     = doneWater + doneMist;
+  const totalAll    = totalWater + totalMist;
+  const allComplete = doneAll === totalAll && totalAll > 0;
+
+  const getImg = (name) => plantImages[name === "Monstera (x2)" ? "Monstera" : name] || null;
 
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(135deg,#0a1a0f 0%,#0d2318 40%,#0a1a0f 100%)", fontFamily: "'Georgia','Times New Roman',serif", color: "#e8f5e9" }}>
 
-      {/* ── Header ─────────────────────────────────────────────── */}
+      {showAdd && <AddPlantModal onClose={() => setShowAdd(false)} onAdd={handleAddPlant} />}
+
+      {/* Header */}
       <div style={{ background: "linear-gradient(180deg,rgba(255,255,255,0.04) 0%,transparent 100%)", borderBottom: "1px solid rgba(134,239,172,0.15)", padding: "1.5rem 1.5rem 1.2rem", textAlign: "center" }}>
         <div style={{ fontSize: "1.8rem", marginBottom: "0.3rem" }}>🌿</div>
         <h1 style={{ fontSize: "clamp(1.3rem,5vw,1.8rem)", fontWeight: "400", letterSpacing: "0.08em", color: "#86efac", margin: "0 0 0.5rem", textTransform: "uppercase" }}>Weekly Plant Care</h1>
-
-        {/* Two progress bars */}
         <div style={{ maxWidth: "280px", margin: "0 auto" }}>
-          {[
-            { label: "Watering", done: doneWater, total: totalWater, color: "#4ade80" },
-            { label: "Misting",  done: doneMist,  total: totalMist,  color: "#67e8f9" },
-          ].map(({ label, done, total, color }) => (
+          {[{ label: "Watering", done: doneWater, total: totalWater, color: "#4ade80" }, { label: "Misting", done: doneMist, total: totalMist, color: "#67e8f9" }].map(({ label, done, total, color }) => (
             <div key={label} style={{ marginBottom: "0.4rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.68rem", color: "rgba(134,239,172,0.5)", marginBottom: "0.2rem" }}>
                 <span>{label}</span><span>{done}/{total}</span>
@@ -251,19 +467,14 @@ export default function App() {
             </div>
           ))}
         </div>
-
         {doneAll > 0 && (
-          <button onClick={resetAll} style={{
-            marginTop: "0.7rem", background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)",
-            borderRadius: "2rem", padding: "0.3rem 0.9rem", color: "rgba(252,165,165,0.8)",
-            cursor: "pointer", fontSize: "0.72rem", fontFamily: "inherit", letterSpacing: "0.05em",
-          }}>
+          <button onClick={resetAll} style={{ marginTop: "0.7rem", background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "2rem", padding: "0.3rem 0.9rem", color: "rgba(252,165,165,0.8)", cursor: "pointer", fontSize: "0.72rem", fontFamily: "inherit" }}>
             {allComplete ? "🎉 All done! Reset for next week" : "Reset week"}
           </button>
         )}
       </div>
 
-      {/* ── Tabs ───────────────────────────────────────────────── */}
+      {/* Tabs */}
       <div style={{ display: "flex", gap: "0.4rem", padding: "1rem 1rem 0", justifyContent: "center", flexWrap: "wrap" }}>
         {[{ id: "schedule", label: "💧 Schedule" }, { id: "misting", label: "🌫️ Misting" }, { id: "plants", label: "🌿 My Plants" }].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
@@ -277,36 +488,32 @@ export default function App() {
 
       <div style={{ padding: "1.2rem 1rem 2rem" }}>
 
-        {/* ══ SCHEDULE TAB ══════════════════════════════════════ */}
+        {/* ══ SCHEDULE ══ */}
         {tab === "schedule" && <>
-          {/* Day pills */}
           <div style={{ display: "flex", gap: "0.4rem", justifyContent: "center", flexWrap: "wrap", marginBottom: "1rem" }}>
             {schedule.map((d, i) => {
               const complete  = isWaterDayComplete(d.day);
               const dc        = waterChecked[d.day] || {};
-              const doneCount = d.tasks.filter((_, idx) => dc[idx]).length;
+              const doneCount = d.tasks.filter((_,idx) => dc[idx]).length;
               const inProg    = doneCount > 0 && !complete;
               return (
                 <button key={d.day} onClick={() => setActiveDay(i)} style={{
                   background: complete ? "linear-gradient(135deg,#15803d,#166534)" : activeDay === i ? "linear-gradient(135deg,#16a34a,#15803d)" : "rgba(255,255,255,0.04)",
                   border: (complete || activeDay === i) ? "1px solid #4ade80" : "1px solid rgba(134,239,172,0.15)",
-                  borderRadius: "2rem", padding: "0.5rem 1.1rem",
-                  color: (complete || activeDay === i) ? "#fff" : "rgba(134,239,172,0.6)",
+                  borderRadius: "2rem", padding: "0.5rem 1.1rem", color: (complete || activeDay === i) ? "#fff" : "rgba(134,239,172,0.6)",
                   cursor: "pointer", fontSize: "0.78rem", letterSpacing: "0.08em", fontFamily: "inherit", transition: "all 0.2s ease",
                 }}>
-                  {complete ? "✓ " : ""}{d.day}
-                  {inProg && <span style={{ marginLeft: "0.3rem", fontSize: "0.65rem", color: "#fde68a" }}>({doneCount}/{d.tasks.length})</span>}
+                  {complete ? "✓ " : ""}{d.day}{inProg && <span style={{ marginLeft: "0.3rem", fontSize: "0.65rem", color: "#fde68a" }}>({doneCount}/{d.tasks.length})</span>}
                 </button>
               );
             })}
           </div>
-
-          {/* Active day card */}
           {(() => {
-            const d         = schedule[activeDay];
+            const d = schedule[activeDay] || schedule[0];
+            if (!d) return null;
             const complete  = isWaterDayComplete(d.day);
             const dc        = waterChecked[d.day] || {};
-            const doneCount = d.tasks.filter((_, i) => dc[i]).length;
+            const doneCount = d.tasks.filter((_,i) => dc[i]).length;
             return (
               <div style={{ background: complete ? "rgba(22,163,74,0.08)" : "rgba(255,255,255,0.03)", border: `1px solid ${complete ? "#4ade80" : "rgba(134,239,172,0.12)"}`, borderRadius: "1rem", overflow: "hidden", marginBottom: "1rem", transition: "all 0.4s ease" }}>
                 <div style={{ background: complete ? "linear-gradient(135deg,rgba(22,163,74,0.4),rgba(21,128,61,0.3))" : "linear-gradient(135deg,rgba(22,163,74,0.2),rgba(21,128,61,0.1))", padding: "0.9rem 1.2rem", borderBottom: "1px solid rgba(134,239,172,0.1)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -318,18 +525,12 @@ export default function App() {
                 </div>
                 <div style={{ padding: "0.7rem" }}>
                   {d.tasks.map((task, i) => {
-                    const s         = typeColors[task.type];
+                    const s = typeColors[task.type] || typeColors.water;
                     const isChecked = !!(dc[i]);
                     return (
-                      <div key={i} onClick={() => toggleWater(d.day, i)} style={{
-                        display: "flex", gap: "0.7rem", padding: "0.75rem",
-                        marginBottom: i < d.tasks.length - 1 ? "0.4rem" : 0,
-                        background: isChecked ? "rgba(22,163,74,0.08)" : "rgba(255,255,255,0.03)",
-                        borderRadius: "0.6rem", border: `1px solid ${isChecked ? "rgba(74,222,128,0.3)" : "rgba(134,239,172,0.08)"}`,
-                        alignItems: "center", cursor: "pointer", transition: "all 0.2s ease", opacity: isChecked ? 0.7 : 1,
-                      }}>
+                      <div key={i} onClick={() => toggleWater(d.day, i)} style={{ display: "flex", gap: "0.7rem", padding: "0.75rem", marginBottom: i < d.tasks.length-1 ? "0.4rem" : 0, background: isChecked ? "rgba(22,163,74,0.08)" : "rgba(255,255,255,0.03)", borderRadius: "0.6rem", border: `1px solid ${isChecked ? "rgba(74,222,128,0.3)" : "rgba(134,239,172,0.08)"}`, alignItems: "center", cursor: "pointer", transition: "all 0.2s ease", opacity: isChecked ? 0.7 : 1 }}>
                         <Checkbox checked={isChecked} onChange={() => toggleWater(d.day, i)} />
-                        <PlantImg plantKey={task.plant} size={40} />
+                        <PlantImg src={getImg(task.plant)} size={40} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: "0.82rem", fontWeight: "600", color: isChecked ? "#4ade80" : "#86efac", marginBottom: "0.2rem", textDecoration: isChecked ? "line-through" : "none" }}>{task.plant}</div>
                           <div style={{ fontSize: "0.74rem", color: isChecked ? "rgba(232,245,233,0.35)" : "rgba(232,245,233,0.6)", lineHeight: "1.4" }}>{task.action}</div>
@@ -342,18 +543,14 @@ export default function App() {
               </div>
             );
           })()}
-
-          {/* Monthly reminders */}
           <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(134,239,172,0.12)", borderRadius: "1rem", overflow: "hidden", marginBottom: "1rem" }}>
             <div style={{ background: "linear-gradient(135deg,rgba(124,58,237,0.2),rgba(109,40,217,0.1))", padding: "0.75rem 1.2rem", borderBottom: "1px solid rgba(134,239,172,0.1)" }}>
               <h3 style={{ margin: 0, fontSize: "0.85rem", fontWeight: "400", color: "#d8b4fe", letterSpacing: "0.1em", textTransform: "uppercase" }}>Monthly Reminders</h3>
             </div>
             <div style={{ padding: "0.6rem" }}>
-              {monthlyNote.map((note, i) => <div key={i} style={{ padding: "0.45rem 0.6rem", fontSize: "0.76rem", color: "rgba(232,245,233,0.6)", lineHeight: "1.4", borderBottom: i < monthlyNote.length - 1 ? "1px solid rgba(134,239,172,0.06)" : "none" }}>{note}</div>)}
+              {monthlyNote.map((note, i) => <div key={i} style={{ padding: "0.45rem 0.6rem", fontSize: "0.76rem", color: "rgba(232,245,233,0.6)", lineHeight: "1.4", borderBottom: i < monthlyNote.length-1 ? "1px solid rgba(134,239,172,0.06)" : "none" }}>{note}</div>)}
             </div>
           </div>
-
-          {/* Golden rules */}
           <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(134,239,172,0.08)", borderRadius: "1rem", padding: "0.9rem 1.1rem" }}>
             <h3 style={{ margin: "0 0 0.7rem", fontSize: "0.72rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(134,239,172,0.4)" }}>Golden Rules</h3>
             {["💧 Always use filtered water for Calathea, Maranta, Ferns & Spider Plant","🔥 Keep all plants away from radiators — especially Parlour Palm & Spider Plant","🌵 Jade & Echeveria: when in doubt, don't water","💦 Pebble trays benefit: Ferns, Calathea, Maranta, Asparagus Fern & Palm"].map((tip, i) => (
@@ -362,56 +559,30 @@ export default function App() {
           </div>
         </>}
 
-        {/* ══ MISTING TAB ═══════════════════════════════════════ */}
+        {/* ══ MISTING ══ */}
         {tab === "misting" && <>
           <div style={{ background: "rgba(14,116,144,0.12)", border: "1px solid rgba(103,232,249,0.2)", borderRadius: "0.8rem", padding: "0.8rem 1rem", marginBottom: "1rem", fontSize: "0.76rem", color: "rgba(232,245,233,0.65)", lineHeight: "1.5" }}>
-            🌫️ <strong style={{ color: "#67e8f9" }}>Daily misting guide</strong> — mist in the morning so leaves dry before evening. Tick each plant as you go — resets every Monday.
+            🌫️ <strong style={{ color: "#67e8f9" }}>Daily misting guide</strong> — mist in the morning so leaves dry before evening. Resets every Monday.
           </div>
-
           {ALL_DAYS.map(day => {
-            const plants   = mistingSchedule[day] || [];
-            const dc       = mistChecked[day] || {};
-            const doneCount = plants.filter((_, i) => dc[i]).length;
+            const plants    = mistingData[day] || [];
+            const dc        = mistChecked[day] || {};
+            const doneCount = plants.filter((_,i) => dc[i]).length;
             const complete  = isMistDayComplete(day);
-
             return (
-              <div key={day} style={{
-                background: complete ? "rgba(6,78,59,0.2)" : "rgba(255,255,255,0.03)",
-                border: `1px solid ${complete ? "rgba(103,232,249,0.5)" : "rgba(134,239,172,0.1)"}`,
-                borderRadius: "0.8rem", overflow: "hidden", marginBottom: "0.6rem",
-                transition: "all 0.3s ease",
-              }}>
-                {/* Day header */}
-                <div style={{
-                  background: complete ? "rgba(6,148,162,0.3)" : "rgba(14,116,144,0.15)",
-                  padding: "0.6rem 1rem",
-                  borderBottom: plants.length ? "1px solid rgba(134,239,172,0.08)" : "none",
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                }}>
-                  <span style={{ fontSize: "0.85rem", color: complete ? "#67e8f9" : "#67e8f9", fontWeight: complete ? "600" : "400" }}>
-                    {complete ? "✓ " : ""}{day}
-                  </span>
-                  <span style={{ fontSize: "0.7rem", color: complete ? "rgba(103,232,249,0.8)" : "rgba(103,232,249,0.5)" }}>
-                    {plants.length > 0 ? `${doneCount}/${plants.length}` : "no misting"}
-                    {complete && " 🎉"}
-                  </span>
+              <div key={day} style={{ background: complete ? "rgba(6,78,59,0.2)" : "rgba(255,255,255,0.03)", border: `1px solid ${complete ? "rgba(103,232,249,0.5)" : "rgba(134,239,172,0.1)"}`, borderRadius: "0.8rem", overflow: "hidden", marginBottom: "0.6rem", transition: "all 0.3s ease" }}>
+                <div style={{ background: complete ? "rgba(6,148,162,0.3)" : "rgba(14,116,144,0.15)", padding: "0.6rem 1rem", borderBottom: plants.length ? "1px solid rgba(134,239,172,0.08)" : "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: "0.85rem", color: "#67e8f9", fontWeight: complete ? "600" : "400" }}>{complete ? "✓ " : ""}{day}</span>
+                  <span style={{ fontSize: "0.7rem", color: complete ? "rgba(103,232,249,0.8)" : "rgba(103,232,249,0.5)" }}>{plants.length > 0 ? `${doneCount}/${plants.length}` : "no misting"}{complete && " 🎉"}</span>
                 </div>
-
-                {/* Plant rows */}
                 {plants.length > 0 && (
                   <div style={{ padding: "0.4rem 0.6rem" }}>
                     {plants.map(({ p, n }, i) => {
                       const isChecked = !!(dc[i]);
                       return (
-                        <div key={i} onClick={() => toggleMist(day, i)} style={{
-                          display: "flex", alignItems: "center", gap: "0.7rem",
-                          padding: "0.45rem 0.3rem",
-                          borderBottom: i < plants.length - 1 ? "1px solid rgba(134,239,172,0.05)" : "none",
-                          cursor: "pointer", opacity: isChecked ? 0.6 : 1,
-                          transition: "opacity 0.2s ease",
-                        }}>
+                        <div key={i} onClick={() => toggleMist(day, i)} style={{ display: "flex", alignItems: "center", gap: "0.7rem", padding: "0.45rem 0.3rem", borderBottom: i < plants.length-1 ? "1px solid rgba(134,239,172,0.05)" : "none", cursor: "pointer", opacity: isChecked ? 0.6 : 1, transition: "opacity 0.2s ease" }}>
                           <Checkbox checked={isChecked} onChange={() => toggleMist(day, i)} />
-                          <PlantImg plantKey={p} size={34} />
+                          <PlantImg src={getImg(p)} size={34} />
                           <div style={{ flex: 1 }}>
                             <div style={{ fontSize: "0.8rem", color: isChecked ? "#4ade80" : "#86efac", textDecoration: isChecked ? "line-through" : "none" }}>{p}</div>
                             <div style={{ fontSize: "0.7rem", color: "rgba(232,245,233,0.45)" }}>{n}</div>
@@ -425,8 +596,6 @@ export default function App() {
               </div>
             );
           })}
-
-          {/* Never mist box */}
           <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(134,239,172,0.08)", borderRadius: "0.8rem", padding: "0.9rem 1rem", marginTop: "0.5rem" }}>
             <div style={{ fontSize: "0.72rem", color: "rgba(134,239,172,0.4)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.6rem" }}>Never mist these</div>
             {["🚫 Variegated Rubber Plant — wipe leaves instead","🚫 Jade Plant — causes rot and spots","🚫 Echeveria — water sits in rosette and rots","🚫 Bird of Paradise — not needed","🚫 Basil — causes fungal disease"].map((note, i) => (
@@ -435,17 +604,27 @@ export default function App() {
           </div>
         </>}
 
-        {/* ══ PLANTS TAB ════════════════════════════════════════ */}
+        {/* ══ PLANTS ══ */}
         {tab === "plants" && <>
-          <div style={{ fontSize: "0.72rem", color: "rgba(134,239,172,0.4)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.8rem", textAlign: "center" }}>Your collection · 15 plants</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.8rem" }}>
+            <div style={{ fontSize: "0.72rem", color: "rgba(134,239,172,0.4)", letterSpacing: "0.12em", textTransform: "uppercase" }}>
+              Your collection · {plantList.length} plants
+            </div>
+            <button onClick={() => setShowAdd(true)} style={{
+              background: "linear-gradient(135deg,#16a34a,#15803d)", border: "none", borderRadius: "2rem",
+              padding: "0.4rem 0.9rem", color: "white", cursor: "pointer", fontSize: "0.78rem",
+              fontFamily: "inherit", fontWeight: "600",
+            }}>+ Add Plant</button>
+          </div>
           {plantList.map((plant, i) => (
             <div key={i} style={{ display: "flex", gap: "0.9rem", alignItems: "center", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(134,239,172,0.08)", borderRadius: "0.7rem", padding: "0.7rem", marginBottom: "0.5rem" }}>
-              <PlantImg plantKey={plant.key} size={64} />
+              <PlantImg src={getImg(plant.key)} size={64} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: "0.85rem", fontWeight: "600", color: "#86efac", marginBottom: "0.15rem" }}>{plant.key}</div>
                 <div style={{ fontSize: "0.7rem", color: "rgba(134,239,172,0.4)", fontStyle: "italic", marginBottom: "0.2rem" }}>{plant.latin}</div>
                 <div style={{ fontSize: "0.72rem", color: "rgba(232,245,233,0.5)", lineHeight: "1.3" }}>{plant.note}</div>
               </div>
+              <button onClick={() => handleRemovePlant(plant.key)} style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "0.4rem", padding: "0.3rem 0.5rem", color: "rgba(252,165,165,0.6)", cursor: "pointer", fontSize: "0.7rem", fontFamily: "inherit", flexShrink: 0 }}>Remove</button>
             </div>
           ))}
         </>}
