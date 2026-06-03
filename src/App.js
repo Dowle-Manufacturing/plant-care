@@ -497,9 +497,9 @@ function AddPlantModal({ onClose, onAdd }) {
         {/* Name search */}
         {status === "idle" && mode === "name" && (
           <div style={{ display:"flex",gap:"0.5rem",marginBottom:"0.6rem" }}>
-            <input ref={inputRef} value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==="Enter"&&searchByName()} placeholder="e.g. Boston Fern, Peace Lily..."
+            <input ref={inputRef} value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==="Enter"&&search()} placeholder="e.g. Boston Fern, Peace Lily..."
               style={{ flex:1,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(134,239,172,0.2)",borderRadius:"0.6rem",padding:"0.6rem 0.9rem",color:"#e8f5e9",fontSize:"0.85rem",fontFamily:"inherit",outline:"none" }} />
-            <button onClick={searchByName} style={{ background:"linear-gradient(135deg,#16a34a,#15803d)",border:"none",borderRadius:"0.6rem",padding:"0.6rem 1rem",color:"white",cursor:"pointer",fontSize:"0.85rem",fontFamily:"inherit" }}>Search</button>
+            <button onClick={search} style={{ background:"linear-gradient(135deg,#16a34a,#15803d)",border:"none",borderRadius:"0.6rem",padding:"0.6rem 1rem",color:"white",cursor:"pointer",fontSize:"0.85rem",fontFamily:"inherit" }}>Search</button>
           </div>
         )}
 
