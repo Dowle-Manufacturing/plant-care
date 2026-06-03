@@ -616,12 +616,18 @@ const mistingData = collection?.misting  || EMPTY_COLLECTION.misting;
 
   // ── Save collection to shared DB and localStorage ───────────────
 const saveCollection = useCallback((newCollection) => {
-    console.log("Saving collection, plants count:", newCollection?.plants?.length);
-    const withImages = { ...newCollection, images: lsGet(STORAGE_IMAGES_KEY) || {} };
-    setCollection(newCollection);
+  console.log("saveCollection called with:", newCollection?.plants?.length, "plants");
+  console.log("Full collection:", JSON.stringify(newCollection).slice(0, 200));
+  setCollection(newCollection);
+  try {
     lsSet("plant_collection_local", newCollection);
-    writeSharedCollection(withImages);
-  }, []);
+    const saved = lsGet("plant_collection_local");
+    console.log("localStorage saved successfully, plants:", saved?.plants?.length);
+  } catch(e) {
+    console.error("localStorage save error:", e.message);
+  }
+  writeSharedCollection(newCollection);
+}, []);
 
   // ── Persist check state locally ─────────────────────────────────
   useEffect(() => {
