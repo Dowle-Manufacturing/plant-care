@@ -4,33 +4,62 @@ export default async function handler(req, res) {
   }
 
   // ── Wikipedia image search ────────────────────────────────────
-  if (req.body.type === "image_search") {
-    try {
-      const plantName = req.body.plant || "";
-      const latinName = req.body.latin || "";
-      const searchTerms = [latinName, plantName, `${plantName} plant`];
-      let imageUrl = null;
-      for (const term of searchTerms) {
-        if (imageUrl) break;
-        if (!term.trim()) continue;
-        const searchRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(term)}&format=json&origin=*`);
+if (req.body.type === "image_search") {
+  try {
+    const plantName = req.body.plant || "";
+    const latinName = req.body.latin || "";
+    let imageUrl = null;
+
+    // ── Try Wikipedia first ──────────────────────────────────
+    const searchTerms = [latinName, plantName, `${plantName} plant`];
+    for (const term of searchTerms) {
+      if (imageUrl) break;
+      if (!term.trim()) continue;
+      try {
+        const searchRes = await fetch(
+          `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(term)}&format=json&origin=*`
+        );
         const searchData = await searchRes.json();
         const firstResult = searchData?.query?.search?.[0];
         if (!firstResult) continue;
         const pageTitle = encodeURIComponent(firstResult.title);
-        const imageRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${pageTitle}&prop=pageimages&pithumbsize=600&format=json&origin=*`);
+        const imageRes = await fetch(
+          `https://en.wikipedia.org/w/api.php?action=query&titles=${pageTitle}&prop=pageimages&pithumbsize=600&format=json&origin=*`
+        );
         const imageData = await imageRes.json();
         const pages = imageData?.query?.pages;
         const page = pages ? Object.values(pages)[0] : null;
         const thumb = page?.thumbnail?.source;
         if (thumb) { imageUrl = thumb; break; }
-      }
-      return res.status(200).json({ imageUrl: imageUrl || null });
-    } catch (err) {
-      return res.status(200).json({ imageUrl: null });
+      } catch {}
     }
-  }
 
+    // ── Fall back to Google Custom Search ───────────────────
+    if (!imageUrl && process.env.GOOGLE_SEARCH_API_KEY && process.env.GOOGLE_SEARCH_CX) {
+      try {
+        const query = encodeURIComponent(`${plantName} ${latinName} houseplant`);
+        const googleRes = await fetch(
+          `https://www.googleapis.com/customsearch/v1?key=${process.env.GOOGLE_SEARCH_API_KEY}&cx=${process.env.GOOGLE_SEARCH_CX}&q=${query}&searchType=image&num=5&imgType=photo&imgSize=medium`
+        );
+        const googleData = await googleRes.json();
+        const items = googleData?.items || [];
+        for (const item of items) {
+          const url = item.link;
+          if (url && (url.endsWith(".jpg") || url.endsWith(".jpeg") || url.endsWith(".png") || url.includes("jpg") || url.includes("png"))) {
+            imageUrl = url;
+            break;
+          }
+        }
+      } catch {}
+    }
+
+    return res.status(200).json({ imageUrl: imageUrl || null });
+
+  } catch (err) {
+    console.error("Image search error:", err.message);
+    return res.status(200).json({ imageUrl: null });
+  }
+}
   // ── Read shared plant collection ──────────────────────────────
   if (req.body.type === "read_collection") {
     try {
