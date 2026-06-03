@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 
-// ── Default plant images (Unsplash) ─────────────────────────────
 const DEFAULT_IMAGES = {
   "Japanese Bird's Nest Fern": "https://images.unsplash.com/photo-1597305877032-0668b3c6413a?w=120&h=120&fit=crop",
   "Bird's Nest Fern":          "https://images.unsplash.com/photo-1597305877032-0668b3c6413a?w=120&h=120&fit=crop",
@@ -117,7 +116,27 @@ function getWeekKey() {
   return `plantcare_${monday.getFullYear()}${String(monday.getMonth()+1).padStart(2,"0")}${String(monday.getDate()).padStart(2,"0")}`;
 }
 
-// ── API functions ────────────────────────────────────────────────
+// ── Fetch a single plant image via the API route ─────────────────
+async function searchPlantImage(plantKey, latinName) {
+  try {
+    const res = await fetch("/api/claude", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "image_search",
+        plant: plantKey,
+        latin: latinName,
+      }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.imageUrl || null;
+  } catch {
+    return null;
+  }
+}
+
+// ── Claude plant data lookup ──────────────────────────────────────
 async function askClaude(prompt) {
   const res = await fetch("/api/claude", {
     method: "POST",
@@ -133,7 +152,6 @@ async function askClaude(prompt) {
   return text;
 }
 
-
 async function getPlantData(plantName) {
   const prompt = `You are a houseplant expert. For the houseplant "${plantName}" return ONLY a valid JSON object with no markdown, no explanation, just raw JSON.
 
@@ -142,7 +160,6 @@ Return exactly this structure:
   "commonName": "display name for the plant",
   "latinName": "scientific name",
   "shortNote": "one short sentence about the most important care tip",
-  "imageUrl": "https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=120&h=120&fit=crop",
   "wateringTasks": [
     { "day": "Monday or Thursday or Saturday", "action": "specific watering instruction", "type": "water" }
   ],
@@ -152,7 +169,6 @@ Return exactly this structure:
   "needsMisting": true
 }
 
-For imageUrl use a real Unsplash photo URL showing the ACTUAL LIVING PLANT growing in a pot — not illustrations, not flowers only. Use a real photo ID.
 For wateringTasks add 1-2 tasks on Monday, Thursday, or Saturday only.
 For mistingDays use 2-4 days if it needs misting.`;
 
@@ -164,7 +180,7 @@ For mistingDays use 2-4 days if it needs misting.`;
   return JSON.parse(clean.slice(start, end + 1));
 }
 
-// ── Sub-components ───────────────────────────────────────────────
+// ── Sub-components ────────────────────────────────────────────────
 function PlantImg({ src, size = 56 }) {
   const [err, setErr] = useState(false);
   if (!src || err) return (
@@ -186,7 +202,7 @@ function Checkbox({ checked, onChange }) {
   );
 }
 
-// ── Add Plant Modal ──────────────────────────────────────────────
+// ── Add Plant Modal ───────────────────────────────────────────────
 function AddPlantModal({ onClose, onAdd }) {
   const [query,   setQuery]   = useState("");
   const [status,  setStatus]  = useState("idle");
@@ -197,12 +213,7 @@ function AddPlantModal({ onClose, onAdd }) {
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
-  const steps = [
-    "Searching for plant info...",
-    "Looking up care requirements...",
-    "Finding a photo...",
-    "Building your schedule entries...",
-  ];
+  const steps = ["Searching for plant info...","Looking up care requirements...","Finding a photo...","Building your schedule entries..."];
 
   useEffect(() => {
     if (status !== "loading") { setStepIdx(0); return; }
@@ -218,6 +229,9 @@ function AddPlantModal({ onClose, onAdd }) {
     setErrMsg("");
     try {
       const data = await getPlantData(query.trim());
+      // Fetch image separately via Unsplash
+      const imageUrl = await searchPlantImage(data.commonName, data.latinName);
+      data.imageUrl = imageUrl;
       setResult(data);
       setStatus("success");
     } catch (e) {
@@ -234,14 +248,8 @@ function AddPlantModal({ onClose, onAdd }) {
           <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(134,239,172,0.5)", cursor: "pointer", fontSize: "1.3rem", lineHeight: 1 }}>×</button>
         </div>
         <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
-          <input
-            ref={inputRef}
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && search()}
-            placeholder="e.g. Boston Fern, Peace Lily..."
-            style={{ flex: 1, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(134,239,172,0.2)", borderRadius: "0.6rem", padding: "0.6rem 0.9rem", color: "#e8f5e9", fontSize: "0.85rem", fontFamily: "inherit", outline: "none" }}
-          />
+          <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && search()} placeholder="e.g. Boston Fern, Peace Lily..."
+            style={{ flex: 1, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(134,239,172,0.2)", borderRadius: "0.6rem", padding: "0.6rem 0.9rem", color: "#e8f5e9", fontSize: "0.85rem", fontFamily: "inherit", outline: "none" }} />
           <button onClick={search} disabled={status === "loading"} style={{ background: "linear-gradient(135deg,#16a34a,#15803d)", border: "none", borderRadius: "0.6rem", padding: "0.6rem 1rem", color: "white", cursor: "pointer", fontSize: "0.85rem", fontFamily: "inherit", opacity: status === "loading" ? 0.6 : 1 }}>
             {status === "loading" ? "..." : "Search"}
           </button>
@@ -297,12 +305,12 @@ function AddPlantModal({ onClose, onAdd }) {
   );
 }
 
-// ── Main App ─────────────────────────────────────────────────────
+// ── Main App ──────────────────────────────────────────────────────
 export default function App() {
-  const [tab,        setTab]        = useState("schedule");
-  const [activeDay,  setActiveDay]  = useState(0);
-  const [weekKey,    setWeekKey]    = useState(getWeekKey());
-  const [showAdd,    setShowAdd]    = useState(false);
+  const [tab,           setTab]           = useState("schedule");
+  const [activeDay,     setActiveDay]     = useState(0);
+  const [weekKey,       setWeekKey]       = useState(getWeekKey());
+  const [showAdd,       setShowAdd]       = useState(false);
   const [imgRefreshing, setImgRefreshing] = useState(false);
 
   const [plantImages,  setPlantImages]  = useState({ ...DEFAULT_IMAGES });
@@ -312,7 +320,7 @@ export default function App() {
   const [waterChecked, setWaterChecked] = useState({});
   const [mistChecked,  setMistChecked]  = useState({});
 
-  // ── Load from storage ──────────────────────────────────────────
+  // ── Load saved data from storage ────────────────────────────────
   useEffect(() => {
     const key = getWeekKey();
     setWeekKey(key);
@@ -333,56 +341,50 @@ export default function App() {
     }).catch(() => {});
   }, []);
 
-  // ── Auto-refresh all plant images on mount ─────────────────────
- useEffect(() => {
-  const refreshImages = async () => {
-    setImgRefreshing(true);
-    const currentList = DEFAULT_PLANT_LIST;
-    const updated = {};
-    
-    for (const plant of currentList) {
-      try {
-        const res = await fetch("/api/claude", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "image_search",
-            plant: plant.key,
-            latin: plant.latin,
-          }),
-        });
-        const data = await res.json();
-        if (data.imageUrl) {
-          updated[plant.key] = data.imageUrl;
-          setPlantImages(prev => ({ ...prev, [plant.key]: data.imageUrl }));
-        }
-      } catch {}
-      await new Promise(r => setTimeout(r, 600));
-    }
+  // ── Refresh all plant images on mount ───────────────────────────
+  useEffect(() => {
+    let cancelled = false;
 
-    if (Object.keys(updated).length > 0) {
-      setPlantImages(prev => {
-        const merged = { ...prev, ...updated };
+    const refreshAllImages = async () => {
+      setImgRefreshing(true);
+      const freshImages = {};
+
+      for (const plant of DEFAULT_PLANT_LIST) {
+        if (cancelled) break;
+        try {
+          const url = await searchPlantImage(plant.key, plant.latin);
+          if (url && !cancelled) {
+            freshImages[plant.key] = url;
+            // Update images one by one as they arrive
+            setPlantImages(prev => ({ ...prev, [plant.key]: url }));
+          }
+        } catch {}
+        // Stagger requests to avoid rate limiting
+        await new Promise(r => setTimeout(r, 700));
+      }
+
+      if (!cancelled && Object.keys(freshImages).length > 0) {
+        // Persist the updated images
         if (window.storage) {
           window.storage.get("plant_data").then(r => {
             const existing = r?.value ? JSON.parse(r.value) : {};
             window.storage.set("plant_data", JSON.stringify({
               ...existing,
-              images: merged,
+              images: { ...DEFAULT_IMAGES, ...freshImages },
             })).catch(() => {});
           }).catch(() => {});
         }
-        return merged;
-      });
-    }
-    setImgRefreshing(false);
-  };
+      }
 
-  const t = setTimeout(refreshImages, 1500);
-  return () => clearTimeout(t);
-}, []);
+      if (!cancelled) setImgRefreshing(false);
+    };
 
-  // ── Save checks ────────────────────────────────────────────────
+    // Wait 1.5s for storage to load first, then refresh
+    const t = setTimeout(refreshAllImages, 1500);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, []);
+
+  // ── Save check state ─────────────────────────────────────────────
   useEffect(() => {
     if (!window.storage) return;
     if (!Object.keys(waterChecked).length && !Object.keys(mistChecked).length) return;
@@ -453,9 +455,7 @@ export default function App() {
       <div style={{ background: "linear-gradient(180deg,rgba(255,255,255,0.04) 0%,transparent 100%)", borderBottom: "1px solid rgba(134,239,172,0.15)", padding: "1.5rem 1.5rem 1.2rem", textAlign: "center" }}>
         <div style={{ fontSize: "1.8rem", marginBottom: "0.3rem" }}>🌿</div>
         <h1 style={{ fontSize: "clamp(1.3rem,5vw,1.8rem)", fontWeight: "400", letterSpacing: "0.08em", color: "#86efac", margin: "0 0 0.5rem", textTransform: "uppercase" }}>Weekly Plant Care</h1>
-        {imgRefreshing && (
-          <div style={{ fontSize: "0.68rem", color: "rgba(134,239,172,0.4)", marginBottom: "0.4rem" }}>🌿 Refreshing plant images...</div>
-        )}
+        {imgRefreshing && <div style={{ fontSize: "0.68rem", color: "rgba(134,239,172,0.4)", marginBottom: "0.4rem" }}>🌿 Refreshing plant images...</div>}
         <div style={{ maxWidth: "280px", margin: "0 auto" }}>
           {[{ label: "Watering", done: doneWater, total: totalWater, color: "#4ade80" }, { label: "Misting", done: doneMist, total: totalMist, color: "#67e8f9" }].map(({ label, done, total, color }) => (
             <div key={label} style={{ marginBottom: "0.4rem" }}>
