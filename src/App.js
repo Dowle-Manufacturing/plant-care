@@ -126,44 +126,15 @@ async function askClaude(prompt) {
     body: JSON.stringify({
       model: "claude-sonnet-4-20250514",
       max_tokens: 1000,
-      tools: [{ type: "web_search_20250305", name: "web_search" }],
       messages: [{ role: "user", content: prompt }],
     }),
   });
   const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
   const text = data.content.filter(b => b.type === "text").map(b => b.text).join("");
+  if (!text) throw new Error("Empty response");
   return text;
 }
-async function getPlantData(plantName) {
-  const prompt = `You are a houseplant expert. Look up "${plantName}" and return ONLY a valid JSON object with no markdown, no explanation, just raw JSON.
-
-Return exactly this structure:
-{
-  "commonName": "display name for the plant",
-  "latinName": "scientific name",
-  "shortNote": "one short sentence about care highlight",
-  "imageUrl": "a direct working image URL ending in .jpg or .png from unsplash.com using format https://images.unsplash.com/photo-XXXXXXXXXX?w=120&h=120&fit=crop",
-  "wateringTasks": [
-    { "day": "Monday or Thursday or Saturday", "action": "specific watering instruction", "type": "water or mist or humidity or check or wipe" }
-  ],
-  "mistingDays": [
-    { "day": "day of week", "note": "brief misting instruction" }
-  ],
-  "needsMisting": true or false
-}
-
-For wateringTasks, add 1-2 tasks spread across Monday, Thursday, or Saturday only.
-For mistingDays, use any day of the week, 2-4 days if it needs misting.
-For the imageUrl, use a real Unsplash photo URL for this specific plant.`;
-
-  const raw = await askClaude(prompt);
-  const clean = raw.replace(/```json|```/g, "").trim();
-  const start = clean.indexOf("{");
-  const end   = clean.lastIndexOf("}");
-  if (start === -1 || end === -1) throw new Error("No JSON found");
-  return JSON.parse(clean.slice(start, end + 1));
-}
-
 // ── Sub-components ───────────────────────────────────────────────
 function PlantImg({ src, size = 56 }) {
   const [err, setErr] = useState(false);
