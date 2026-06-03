@@ -19,7 +19,6 @@ const DEFAULT_IMAGES = {
   "Parlour Palm":              "https://images.unsplash.com/photo-1587334274328-64186a80aeee?w=120&h=120&fit=crop",
 };
 
-// ── Default schedule ─────────────────────────────────────────────
 const DEFAULT_SCHEDULE = [
   {
     day: "Monday", subtitle: "Tropical & Humidity Lovers",
@@ -30,7 +29,7 @@ const DEFAULT_SCHEDULE = [
       { plant: "Bird's Nest Fern",          action: "Water around edges if dry — never into the crown.",                type: "water"    },
       { plant: "Asparagus Fern",            action: "Water if lightly dry. Mist all over the plant.",                   type: "mist"     },
       { plant: "Kangaroo Paw Fern",         action: "Water if dry. Mist around the fronds.",                            type: "mist"     },
-      { plant: "Parlour Palm",              action: "Water if top inch is dry. Keep away from radiator!",                type: "water"    },
+      { plant: "Parlour Palm",              action: "Water if top inch is dry. Keep away from radiator!",               type: "water"    },
       { plant: "All pebble trays",          action: "Refill all pebble trays — Calathea, Ferns, Maranta, Palm.",        type: "humidity" },
       { plant: "Basil",                     action: "Water at the base. Pinch off any flower buds.",                    type: "water"    },
     ],
@@ -38,29 +37,29 @@ const DEFAULT_SCHEDULE = [
   {
     day: "Thursday", subtitle: "All Plants Check-in",
     tasks: [
-      { plant: "Calathea",                  action: "Check soil — water if top inch is dry. Use filtered water.",        type: "water" },
-      { plant: "Maranta (Prayer Plant)",    action: "Check soil — water if top inch is dry. Filtered water.",           type: "water" },
-      { plant: "Japanese Bird's Nest Fern", action: "Check — water around edges if needed.",                            type: "water" },
-      { plant: "Bird's Nest Fern",          action: "Check — water around edges if needed.",                            type: "water" },
-      { plant: "Asparagus Fern",            action: "Check soil — water if dry. Mist all over.",                        type: "mist"  },
-      { plant: "Kangaroo Paw Fern",         action: "Check soil — water if dry. Mist fronds.",                          type: "mist"  },
-      { plant: "Parlour Palm",              action: "Check — water if top inch is dry. Mist fronds.",                   type: "mist"  },
-      { plant: "Monstera",                  action: "Water if top 2 inches are dry. Mist moss poles.",                  type: "water" },
-      { plant: "Bird of Paradise",          action: "Water thoroughly if top 2 inches are dry.",                        type: "water" },
-      { plant: "Chinese Money Plant",       action: "Water if top inch is dry. Rotate pot.",                            type: "water" },
-      { plant: "Spider Plant",              action: "Water if top inch is dry. Use filtered water.",                    type: "water" },
-      { plant: "Basil",                     action: "Water at the base — keep moist.",                                  type: "water" },
+      { plant: "Calathea",                  action: "Check soil — water if top inch is dry. Use filtered water.",       type: "water" },
+      { plant: "Maranta (Prayer Plant)",    action: "Check soil — water if top inch is dry. Filtered water.",          type: "water" },
+      { plant: "Japanese Bird's Nest Fern", action: "Check — water around edges if needed.",                           type: "water" },
+      { plant: "Bird's Nest Fern",          action: "Check — water around edges if needed.",                           type: "water" },
+      { plant: "Asparagus Fern",            action: "Check soil — water if dry. Mist all over.",                       type: "mist"  },
+      { plant: "Kangaroo Paw Fern",         action: "Check soil — water if dry. Mist fronds.",                         type: "mist"  },
+      { plant: "Parlour Palm",              action: "Check — water if top inch is dry. Mist fronds.",                  type: "mist"  },
+      { plant: "Monstera",                  action: "Water if top 2 inches are dry. Mist moss poles.",                 type: "water" },
+      { plant: "Bird of Paradise",          action: "Water thoroughly if top 2 inches are dry.",                       type: "water" },
+      { plant: "Chinese Money Plant",       action: "Water if top inch is dry. Rotate pot.",                           type: "water" },
+      { plant: "Spider Plant",              action: "Water if top inch is dry. Use filtered water.",                   type: "water" },
+      { plant: "Basil",                     action: "Water at the base — keep moist.",                                 type: "water" },
     ],
   },
   {
     day: "Saturday", subtitle: "Low-Maintenance & Health Check",
     tasks: [
-      { plant: "Variegated Rubber Plant",   action: "Water if top 2 inches are dry. Wipe leaves — no misting!",        type: "wipe"  },
-      { plant: "Jade Plant",                action: "Only water if bone dry. Ensure it's in the sunniest spot.",        type: "water" },
-      { plant: "Echeveria",                 action: "Only water if bone dry. Check it's getting direct sun.",           type: "water" },
+      { plant: "Variegated Rubber Plant",   action: "Water if top 2 inches are dry. Wipe leaves — no misting!",       type: "wipe"  },
+      { plant: "Jade Plant",                action: "Only water if bone dry. Ensure it's in the sunniest spot.",       type: "water" },
+      { plant: "Echeveria",                 action: "Only water if bone dry. Check it's getting direct sun.",          type: "water" },
       { plant: "All plants",                action: "General health check — yellowing, browning, pests. Trim dead leaves.", type: "check" },
-      { plant: "Chinese Money Plant",       action: "Check for pups at base — pot up any 5cm+ tall.",                  type: "check" },
-      { plant: "Spider Plant",              action: "Check for spiderettes ready to propagate.",                        type: "check" },
+      { plant: "Chinese Money Plant",       action: "Check for pups at base — pot up any 5cm+ tall.",                 type: "check" },
+      { plant: "Spider Plant",              action: "Check for spiderettes ready to propagate.",                       type: "check" },
     ],
   },
 ];
@@ -118,7 +117,7 @@ function getWeekKey() {
   return `plantcare_${monday.getFullYear()}${String(monday.getMonth()+1).padStart(2,"0")}${String(monday.getDate()).padStart(2,"0")}`;
 }
 
-// ── Claude API call ──────────────────────────────────────────────
+// ── API functions ────────────────────────────────────────────────
 async function askClaude(prompt) {
   const res = await fetch("/api/claude", {
     method: "POST",
@@ -128,20 +127,50 @@ async function askClaude(prompt) {
     }),
   });
   const data = await res.json();
-  console.log("API response:", JSON.stringify(data).slice(0, 200));
   if (data.error) throw new Error(data.error.message);
   const text = data.content.filter(b => b.type === "text").map(b => b.text).join("");
   if (!text) throw new Error("Empty response");
   return text;
 }
+
+async function fetchPlantImage(plantName, latinName) {
+  const prompt = `I need an Unsplash image URL for the houseplant "${plantName}" (latin name: ${latinName}).
+
+STRICT requirements for the image:
+- Must show the ACTUAL LIVING PLANT itself growing in a pot or natural habitat
+- Must be a real photograph, NOT an illustration or drawing
+- The plant must be the main subject and clearly identifiable as ${plantName}
+- NOT just flowers, seeds, or fruit in isolation
+- NOT a product listing or shop photo
+
+Return ONLY this raw JSON object with no markdown or explanation:
+{
+  "imageUrl": "https://images.unsplash.com/photo-XXXXXXXXXX?w=120&h=120&fit=crop"
+}
+
+Choose the most accurate Unsplash photo ID you know for this specific plant. The photo ID must be real and exist on Unsplash.`;
+
+  try {
+    const raw = await askClaude(prompt);
+    const clean = raw.replace(/```json|```/g, "").trim();
+    const start = clean.indexOf("{");
+    const end = clean.lastIndexOf("}");
+    if (start === -1 || end === -1) return null;
+    const parsed = JSON.parse(clean.slice(start, end + 1));
+    return parsed.imageUrl || null;
+  } catch {
+    return null;
+  }
+}
+
 async function getPlantData(plantName) {
-  const prompt = `You are a houseplant expert. For "${plantName}" return ONLY a valid JSON object with no markdown, no explanation, just raw JSON.
+  const prompt = `You are a houseplant expert. For the houseplant "${plantName}" return ONLY a valid JSON object with no markdown, no explanation, just raw JSON.
 
 Return exactly this structure:
 {
   "commonName": "display name for the plant",
   "latinName": "scientific name",
-  "shortNote": "one short sentence about care highlight",
+  "shortNote": "one short sentence about the most important care tip",
   "imageUrl": "https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=120&h=120&fit=crop",
   "wateringTasks": [
     { "day": "Monday or Thursday or Saturday", "action": "specific watering instruction", "type": "water" }
@@ -152,6 +181,7 @@ Return exactly this structure:
   "needsMisting": true
 }
 
+For imageUrl use a real Unsplash photo URL showing the ACTUAL LIVING PLANT growing in a pot — not illustrations, not flowers only. Use a real photo ID.
 For wateringTasks add 1-2 tasks on Monday, Thursday, or Saturday only.
 For mistingDays use 2-4 days if it needs misting.`;
 
@@ -162,6 +192,7 @@ For mistingDays use 2-4 days if it needs misting.`;
   if (start === -1 || end === -1) throw new Error("No JSON found");
   return JSON.parse(clean.slice(start, end + 1));
 }
+
 // ── Sub-components ───────────────────────────────────────────────
 function PlantImg({ src, size = 56 }) {
   const [err, setErr] = useState(false);
@@ -186,38 +217,22 @@ function Checkbox({ checked, onChange }) {
 
 // ── Add Plant Modal ──────────────────────────────────────────────
 function AddPlantModal({ onClose, onAdd }) {
-  const [query,    setQuery]    = useState("");
-  const [status,   setStatus]   = useState("idle"); // idle | loading | success | error
-  const [result,   setResult]   = useState(null);
-  const [errMsg,   setErrMsg]   = useState("");
+  const [query,   setQuery]   = useState("");
+  const [status,  setStatus]  = useState("idle");
+  const [result,  setResult]  = useState(null);
+  const [errMsg,  setErrMsg]  = useState("");
+  const [stepIdx, setStepIdx] = useState(0);
   const inputRef = useRef(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
- const search = async () => {
-  if (!query.trim()) return;
-  setStatus("loading");
-  setResult(null);
-  setErrMsg("");
-  try {
-    const data = await getPlantData(query.trim());
-    console.log("Plant data received:", data);
-    setResult(data);
-    setStatus("success");
-  } catch (e) {
-    console.error("Search error:", e.message);
-    setErrMsg(`Error: ${e.message}`);
-    setStatus("error");
-  }
-};
-
   const steps = [
-    "Searching the web for plant info...",
+    "Searching for plant info...",
     "Looking up care requirements...",
     "Finding a photo...",
     "Building your schedule entries...",
   ];
-  const [stepIdx, setStepIdx] = useState(0);
+
   useEffect(() => {
     if (status !== "loading") { setStepIdx(0); return; }
     const stepsLen = 4;
@@ -225,16 +240,28 @@ function AddPlantModal({ onClose, onAdd }) {
     return () => clearInterval(t);
   }, [status]);
 
+  const search = async () => {
+    if (!query.trim()) return;
+    setStatus("loading");
+    setResult(null);
+    setErrMsg("");
+    try {
+      const data = await getPlantData(query.trim());
+      setResult(data);
+      setStatus("success");
+    } catch (e) {
+      setErrMsg(`Could not find plant: ${e.message}`);
+      setStatus("error");
+    }
+  };
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
       <div style={{ background: "linear-gradient(135deg,#0d2318,#0a1a0f)", border: "1px solid rgba(134,239,172,0.2)", borderRadius: "1rem", padding: "1.5rem", width: "100%", maxWidth: "420px", maxHeight: "90vh", overflowY: "auto" }}>
-
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.2rem" }}>
           <h2 style={{ margin: 0, fontSize: "1.1rem", color: "#86efac", fontWeight: "400" }}>🌱 Add a New Plant</h2>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(134,239,172,0.5)", cursor: "pointer", fontSize: "1.3rem", lineHeight: 1 }}>×</button>
         </div>
-
-        {/* Search bar */}
         <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
           <input
             ref={inputRef}
@@ -242,22 +269,12 @@ function AddPlantModal({ onClose, onAdd }) {
             onChange={e => setQuery(e.target.value)}
             onKeyDown={e => e.key === "Enter" && search()}
             placeholder="e.g. Boston Fern, Peace Lily..."
-            style={{
-              flex: 1, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(134,239,172,0.2)",
-              borderRadius: "0.6rem", padding: "0.6rem 0.9rem", color: "#e8f5e9", fontSize: "0.85rem",
-              fontFamily: "inherit", outline: "none",
-            }}
+            style={{ flex: 1, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(134,239,172,0.2)", borderRadius: "0.6rem", padding: "0.6rem 0.9rem", color: "#e8f5e9", fontSize: "0.85rem", fontFamily: "inherit", outline: "none" }}
           />
-          <button onClick={search} disabled={status === "loading"} style={{
-            background: "linear-gradient(135deg,#16a34a,#15803d)", border: "none", borderRadius: "0.6rem",
-            padding: "0.6rem 1rem", color: "white", cursor: "pointer", fontSize: "0.85rem", fontFamily: "inherit",
-            opacity: status === "loading" ? 0.6 : 1,
-          }}>
+          <button onClick={search} disabled={status === "loading"} style={{ background: "linear-gradient(135deg,#16a34a,#15803d)", border: "none", borderRadius: "0.6rem", padding: "0.6rem 1rem", color: "white", cursor: "pointer", fontSize: "0.85rem", fontFamily: "inherit", opacity: status === "loading" ? 0.6 : 1 }}>
             {status === "loading" ? "..." : "Search"}
           </button>
         </div>
-
-        {/* Loading state */}
         {status === "loading" && (
           <div style={{ textAlign: "center", padding: "1.5rem", color: "rgba(134,239,172,0.6)", fontSize: "0.82rem" }}>
             <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem", animation: "spin 2s linear infinite" }}>🌿</div>
@@ -265,15 +282,9 @@ function AddPlantModal({ onClose, onAdd }) {
             <style>{`@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
           </div>
         )}
-
-        {/* Error */}
         {status === "error" && (
-          <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "0.6rem", padding: "0.8rem", color: "rgba(252,165,165,0.8)", fontSize: "0.8rem" }}>
-            {errMsg}
-          </div>
+          <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "0.6rem", padding: "0.8rem", color: "rgba(252,165,165,0.8)", fontSize: "0.8rem" }}>{errMsg}</div>
         )}
-
-        {/* Result preview */}
         {status === "success" && result && (
           <div>
             <div style={{ background: "rgba(22,163,74,0.08)", border: "1px solid rgba(74,222,128,0.2)", borderRadius: "0.8rem", padding: "1rem", marginBottom: "1rem" }}>
@@ -285,8 +296,6 @@ function AddPlantModal({ onClose, onAdd }) {
                   <div style={{ fontSize: "0.74rem", color: "rgba(232,245,233,0.6)", marginTop: "0.2rem" }}>{result.shortNote}</div>
                 </div>
               </div>
-
-              {/* Watering tasks preview */}
               <div style={{ marginBottom: "0.6rem" }}>
                 <div style={{ fontSize: "0.68rem", color: "rgba(134,239,172,0.4)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.3rem" }}>Will be added to watering schedule:</div>
                 {result.wateringTasks?.map((t, i) => (
@@ -295,8 +304,6 @@ function AddPlantModal({ onClose, onAdd }) {
                   </div>
                 ))}
               </div>
-
-              {/* Misting preview */}
               {result.needsMisting && result.mistingDays?.length > 0 && (
                 <div>
                   <div style={{ fontSize: "0.68rem", color: "rgba(134,239,172,0.4)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.3rem" }}>Will be added to misting schedule:</div>
@@ -308,16 +315,9 @@ function AddPlantModal({ onClose, onAdd }) {
                 </div>
               )}
             </div>
-
             <div style={{ display: "flex", gap: "0.5rem" }}>
-              <button onClick={() => { setStatus("idle"); setResult(null); setQuery(""); }} style={{
-                flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(134,239,172,0.15)",
-                borderRadius: "0.6rem", padding: "0.7rem", color: "rgba(134,239,172,0.6)", cursor: "pointer", fontSize: "0.82rem", fontFamily: "inherit",
-              }}>Search again</button>
-              <button onClick={() => onAdd(result)} style={{
-                flex: 2, background: "linear-gradient(135deg,#16a34a,#15803d)", border: "none",
-                borderRadius: "0.6rem", padding: "0.7rem", color: "white", cursor: "pointer", fontSize: "0.82rem", fontFamily: "inherit", fontWeight: "600",
-              }}>✓ Add to my collection</button>
+              <button onClick={() => { setStatus("idle"); setResult(null); setQuery(""); }} style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(134,239,172,0.15)", borderRadius: "0.6rem", padding: "0.7rem", color: "rgba(134,239,172,0.6)", cursor: "pointer", fontSize: "0.82rem", fontFamily: "inherit" }}>Search again</button>
+              <button onClick={() => onAdd(result)} style={{ flex: 2, background: "linear-gradient(135deg,#16a34a,#15803d)", border: "none", borderRadius: "0.6rem", padding: "0.7rem", color: "white", cursor: "pointer", fontSize: "0.82rem", fontFamily: "inherit", fontWeight: "600" }}>✓ Add to my collection</button>
             </div>
           </div>
         )}
@@ -332,27 +332,23 @@ export default function App() {
   const [activeDay,  setActiveDay]  = useState(0);
   const [weekKey,    setWeekKey]    = useState(getWeekKey());
   const [showAdd,    setShowAdd]    = useState(false);
+  const [imgRefreshing, setImgRefreshing] = useState(false);
 
-  // Dynamic data
   const [plantImages,  setPlantImages]  = useState({ ...DEFAULT_IMAGES });
   const [schedule,     setSchedule]     = useState(DEFAULT_SCHEDULE);
   const [mistingData,  setMistingData]  = useState(DEFAULT_MISTING);
   const [plantList,    setPlantList]    = useState(DEFAULT_PLANT_LIST);
-
-  // Checked state
   const [waterChecked, setWaterChecked] = useState({});
   const [mistChecked,  setMistChecked]  = useState({});
 
-  // Load from storage
+  // ── Load from storage ──────────────────────────────────────────
   useEffect(() => {
     const key = getWeekKey();
     setWeekKey(key);
     if (!window.storage) return;
-    // Load checks
     window.storage.get(key).then(r => {
       if (r?.value) { try { const s = JSON.parse(r.value); if (s.water) setWaterChecked(s.water); if (s.mist) setMistChecked(s.mist); } catch {} }
     }).catch(() => {});
-    // Load plant data
     window.storage.get("plant_data").then(r => {
       if (r?.value) {
         try {
@@ -366,14 +362,56 @@ export default function App() {
     }).catch(() => {});
   }, []);
 
-  // Save checks
+  // ── Auto-refresh all plant images on mount ─────────────────────
+  useEffect(() => {
+    const refreshImages = async (currentPlantList, currentImages, currentSchedule, currentMisting) => {
+      setImgRefreshing(true);
+      const updated = { ...currentImages };
+      let changed = false;
+      for (const plant of currentPlantList) {
+        try {
+          const url = await fetchPlantImage(plant.key, plant.latin);
+          if (url) {
+            updated[plant.key] = url;
+            changed = true;
+            // Update state incrementally so images appear as they load
+            setPlantImages(prev => ({ ...prev, [plant.key]: url }));
+          }
+        } catch {}
+        await new Promise(r => setTimeout(r, 600));
+      }
+      if (changed) {
+        savePlantData(updated, currentSchedule, currentMisting, currentPlantList);
+      }
+      setImgRefreshing(false);
+    };
+
+    // Small delay to let storage load first
+    const t = setTimeout(() => {
+      setPlantList(pl => {
+        setPlantImages(pi => {
+          setSchedule(sc => {
+            setMistingData(md => {
+              refreshImages(pl, pi, sc, md);
+              return md;
+            });
+            return sc;
+          });
+          return pi;
+        });
+        return pl;
+      });
+    }, 1500);
+    return () => clearTimeout(t);
+  }, []); // runs once on mount
+
+  // ── Save checks ────────────────────────────────────────────────
   useEffect(() => {
     if (!window.storage) return;
     if (!Object.keys(waterChecked).length && !Object.keys(mistChecked).length) return;
     window.storage.set(weekKey, JSON.stringify({ water: waterChecked, mist: mistChecked })).catch(() => {});
   }, [waterChecked, mistChecked, weekKey]);
 
-  // Save plant data
   const savePlantData = (imgs, sched, mist, plants) => {
     if (!window.storage) return;
     window.storage.set("plant_data", JSON.stringify({ images: imgs, schedule: sched, misting: mist, plants })).catch(() => {});
@@ -390,27 +428,15 @@ export default function App() {
     if (window.storage) window.storage.set(weekKey, JSON.stringify({ water: {}, mist: {} })).catch(() => {});
   };
 
-  // Add plant handler
   const handleAddPlant = (data) => {
     const name = data.commonName;
-
-    // Update images
-    const newImages = { ...plantImages, [name]: data.imageUrl };
-    setPlantImages(newImages);
-
-    // Update plant list
-    const newPlants = [...plantList, { key: name, latin: data.latinName, note: data.shortNote }];
-    setPlantList(newPlants);
-
-    // Update schedule — add watering tasks to appropriate days
+    const newImages   = { ...plantImages, [name]: data.imageUrl };
+    const newPlants   = [...plantList, { key: name, latin: data.latinName, note: data.shortNote }];
     const newSchedule = schedule.map(dayObj => {
       const tasksForDay = (data.wateringTasks || []).filter(t => t.day === dayObj.day);
       if (!tasksForDay.length) return dayObj;
       return { ...dayObj, tasks: [...dayObj.tasks, ...tasksForDay.map(t => ({ plant: name, action: t.action, type: t.type || "water" }))] };
     });
-    setSchedule(newSchedule);
-
-    // Update misting schedule
     let newMisting = { ...mistingData };
     if (data.needsMisting && data.mistingDays?.length) {
       data.mistingDays.forEach(({ day, note }) => {
@@ -418,24 +444,20 @@ export default function App() {
         newMisting[day] = [...(newMisting[day] || []), { p: name, n: note }];
       });
     }
-    setMistingData(newMisting);
-
+    setPlantImages(newImages); setPlantList(newPlants); setSchedule(newSchedule); setMistingData(newMisting);
     savePlantData(newImages, newSchedule, newMisting, newPlants);
     setShowAdd(false);
   };
 
-  // Remove plant handler
   const handleRemovePlant = (plantName) => {
     const newPlants   = plantList.filter(p => p.key !== plantName);
-    const newImages   = { ...plantImages };
-    delete newImages[plantName];
+    const newImages   = { ...plantImages }; delete newImages[plantName];
     const newSchedule = schedule.map(d => ({ ...d, tasks: d.tasks.filter(t => t.plant !== plantName) }));
     const newMisting  = Object.fromEntries(Object.entries(mistingData).map(([day, arr]) => [day, arr.filter(m => m.p !== plantName)]));
     setPlantList(newPlants); setPlantImages(newImages); setSchedule(newSchedule); setMistingData(newMisting);
     savePlantData(newImages, newSchedule, newMisting, newPlants);
   };
 
-  // Progress
   const totalWater  = schedule.reduce((s,d) => s + d.tasks.length, 0);
   const doneWater   = schedule.reduce((s,d) => s + d.tasks.filter((_,i) => (waterChecked[d.day]||{})[i]).length, 0);
   const totalMist   = ALL_DAYS.reduce((s,day) => s + (mistingData[day]||[]).length, 0);
@@ -443,8 +465,7 @@ export default function App() {
   const doneAll     = doneWater + doneMist;
   const totalAll    = totalWater + totalMist;
   const allComplete = doneAll === totalAll && totalAll > 0;
-
-  const getImg = (name) => plantImages[name === "Monstera (x2)" ? "Monstera" : name] || null;
+  const getImg      = (name) => plantImages[name === "Monstera (x2)" ? "Monstera" : name] || null;
 
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(135deg,#0a1a0f 0%,#0d2318 40%,#0a1a0f 100%)", fontFamily: "'Georgia','Times New Roman',serif", color: "#e8f5e9" }}>
@@ -455,6 +476,9 @@ export default function App() {
       <div style={{ background: "linear-gradient(180deg,rgba(255,255,255,0.04) 0%,transparent 100%)", borderBottom: "1px solid rgba(134,239,172,0.15)", padding: "1.5rem 1.5rem 1.2rem", textAlign: "center" }}>
         <div style={{ fontSize: "1.8rem", marginBottom: "0.3rem" }}>🌿</div>
         <h1 style={{ fontSize: "clamp(1.3rem,5vw,1.8rem)", fontWeight: "400", letterSpacing: "0.08em", color: "#86efac", margin: "0 0 0.5rem", textTransform: "uppercase" }}>Weekly Plant Care</h1>
+        {imgRefreshing && (
+          <div style={{ fontSize: "0.68rem", color: "rgba(134,239,172,0.4)", marginBottom: "0.4rem" }}>🌿 Refreshing plant images...</div>
+        )}
         <div style={{ maxWidth: "280px", margin: "0 auto" }}>
           {[{ label: "Watering", done: doneWater, total: totalWater, color: "#4ade80" }, { label: "Misting", done: doneMist, total: totalMist, color: "#67e8f9" }].map(({ label, done, total, color }) => (
             <div key={label} style={{ marginBottom: "0.4rem" }}>
@@ -608,13 +632,9 @@ export default function App() {
         {tab === "plants" && <>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.8rem" }}>
             <div style={{ fontSize: "0.72rem", color: "rgba(134,239,172,0.4)", letterSpacing: "0.12em", textTransform: "uppercase" }}>
-              Your collection · {plantList.length} plants
+              Your collection · {plantList.length} plants {imgRefreshing && <span style={{ color: "rgba(134,239,172,0.3)" }}>· updating images...</span>}
             </div>
-            <button onClick={() => setShowAdd(true)} style={{
-              background: "linear-gradient(135deg,#16a34a,#15803d)", border: "none", borderRadius: "2rem",
-              padding: "0.4rem 0.9rem", color: "white", cursor: "pointer", fontSize: "0.78rem",
-              fontFamily: "inherit", fontWeight: "600",
-            }}>+ Add Plant</button>
+            <button onClick={() => setShowAdd(true)} style={{ background: "linear-gradient(135deg,#16a34a,#15803d)", border: "none", borderRadius: "2rem", padding: "0.4rem 0.9rem", color: "white", cursor: "pointer", fontSize: "0.78rem", fontFamily: "inherit", fontWeight: "600" }}>+ Add Plant</button>
           </div>
           {plantList.map((plant, i) => (
             <div key={i} style={{ display: "flex", gap: "0.9rem", alignItems: "center", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(134,239,172,0.08)", borderRadius: "0.7rem", padding: "0.7rem", marginBottom: "0.5rem" }}>
