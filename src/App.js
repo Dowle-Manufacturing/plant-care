@@ -616,16 +616,9 @@ const mistingData = collection?.misting  || EMPTY_COLLECTION.misting;
 
   // ── Save collection to shared DB and localStorage ───────────────
 const saveCollection = useCallback((newCollection) => {
-  console.log("saveCollection called with:", newCollection?.plants?.length, "plants");
-  console.log("Full collection:", JSON.stringify(newCollection).slice(0, 200));
+  console.log("saveCollection called, plants:", newCollection?.plants?.length);
   setCollection(newCollection);
-  try {
-    lsSet("plant_collection_local", newCollection);
-    const saved = lsGet("plant_collection_local");
-    console.log("localStorage saved successfully, plants:", saved?.plants?.length);
-  } catch(e) {
-    console.error("localStorage save error:", e.message);
-  }
+  lsSet("plant_collection_local", newCollection);
   writeSharedCollection(newCollection);
 }, []);
 
