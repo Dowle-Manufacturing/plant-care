@@ -120,7 +120,7 @@ function getWeekKey() {
 
 // ── Claude API call ──────────────────────────────────────────────
 async function askClaude(prompt) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await fetch("/api/claude", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -134,7 +134,6 @@ async function askClaude(prompt) {
   const text = data.content.filter(b => b.type === "text").map(b => b.text).join("");
   return text;
 }
-
 async function getPlantData(plantName) {
   const prompt = `You are a houseplant expert. Look up "${plantName}" and return ONLY a valid JSON object with no markdown, no explanation, just raw JSON.
 
