@@ -124,12 +124,11 @@ async function askClaude(prompt) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
       messages: [{ role: "user", content: prompt }],
     }),
   });
   const data = await res.json();
+  console.log("API response:", JSON.stringify(data).slice(0, 200));
   if (data.error) throw new Error(data.error.message);
   const text = data.content.filter(b => b.type === "text").map(b => b.text).join("");
   if (!text) throw new Error("Empty response");
