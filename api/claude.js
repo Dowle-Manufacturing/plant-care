@@ -9,12 +9,12 @@ export default async function handler(req, res) {
       const plantName = req.body.plant || "";
       const latinName = req.body.latin || "";
 
-      const queries = [
-        `${plantName} single potted plant close up leaves`,
-        `${latinName} potted houseplant close up`,
-        `${plantName} indoor plant leaves detail`,
-        `${plantName} houseplant`,
-      ];
+   const queries = [
+  `${plantName} full plant potted indoor`,
+  `${latinName} whole plant pot`,
+  `${plantName} indoor houseplant full view`,
+  `${plantName} houseplant`,
+];
 
       let bestPhoto = null;
 
@@ -48,7 +48,7 @@ export default async function handler(req, res) {
             let score = plantWords.filter(word => searchText.includes(word)).length * 3;
 
             // Boost photos that suggest close-up single plant shots
-            const goodTerms = ["plant", "leaf", "leaves", "foliage", "potted", "houseplant", "indoor", "close", "detail", "green"];
+            const goodTerms = ["plant", "leaves", "foliage", "potted", "houseplant", "indoor", "full", "whole", "green", "growing"];
             score += goodTerms.filter(t => searchText.includes(t)).length;
 
             // Penalise photos that suggest group shots or unrelated content
