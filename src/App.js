@@ -90,11 +90,21 @@ async function getPlantData(plantName) {
   "commonName": "display name",
   "latinName": "scientific name",
   "shortNote": "one sentence care highlight",
-  "wateringTasks": [{"day":"Monday or Thursday or Saturday","action":"specific instruction","type":"water"}],
+  "wateringTasks": [{"day":"Monday or Thursday or Saturday","action":"specific watering instruction","type":"water"}],
   "mistingDays": [{"day":"day of week","note":"misting instruction"}],
-  "needsMisting": true
+  "needsMisting": true,
+  "care": {
+    "watering": "detailed watering instructions including frequency, how much, and technique",
+    "light": "preferred light conditions and placement advice",
+    "fertiliser": "when to fertilise, what type to use, and how often",
+    "growingSeason": "when the plant actively grows and what changes to expect",
+    "pottingMix": "ideal soil mix composition and drainage requirements",
+    "repotting": "when and how to repot, pot size guidance, and signs it needs repotting",
+    "pruning": "pruning schedule, what to remove, and how to do it",
+    "diseases": "common pests, diseases and conditions to watch for, and how to treat them"
+  }
 }
-Add 1-2 watering tasks on Monday/Thursday/Saturday only. Add 2-4 misting days if needed.`;
+Add 1-2 watering tasks on Monday/Thursday/Saturday only. Add 2-4 misting days if it needs misting.`;
   const raw = await callClaude([{ role: "user", content: prompt }]);
   const clean = raw.replace(/```json|```/g, "").trim();
   const s = clean.indexOf("{"), e = clean.lastIndexOf("}");
@@ -111,7 +121,17 @@ async function identifyPlantFromImage(base64Image, mimeType) {
   "wateringTasks": [{"day":"Monday or Thursday or Saturday","action":"specific watering instruction","type":"water"}],
   "mistingDays": [{"day":"day of week","note":"misting instruction"}],
   "needsMisting": true,
-  "confidence": "high or medium or low"
+  "confidence": "high or medium or low",
+  "care": {
+    "watering": "detailed watering instructions including frequency, how much, and technique",
+    "light": "preferred light conditions and placement advice",
+    "fertiliser": "when to fertilise, what type to use, and how often",
+    "growingSeason": "when the plant actively grows and what changes to expect",
+    "pottingMix": "ideal soil mix composition and drainage requirements",
+    "repotting": "when and how to repot, pot size guidance, and signs it needs repotting",
+    "pruning": "pruning schedule, what to remove, and how to do it",
+    "diseases": "common pests, diseases and conditions to watch for, and how to treat them"
+  }
 }`;
   const messages = [{
     role: "user",
@@ -334,6 +354,77 @@ function HealthCheckModal({ plants, images, onClose }) {
   );
 }
 
+
+// ── Plant Detail Modal ────────────────────────────────────────────
+function PlantDetailModal({ plant, imageUrl, onClose, onRemove }) {
+  const care = plant.care || {};
+  const sections = [
+    { icon: "💧", label: "Watering",      key: "watering"     },
+    { icon: "☀️", label: "Light",          key: "light"        },
+    { icon: "🌱", label: "Fertiliser",     key: "fertiliser"   },
+    { icon: "📅", label: "Growing Season", key: "growingSeason"},
+    { icon: "🪴", label: "Potting Mix",    key: "pottingMix"   },
+    { icon: "🔄", label: "Repotting",      key: "repotting"    },
+    { icon: "✂️", label: "Pruning",        key: "pruning"      },
+    { icon: "🔍", label: "Diseases & Pests",key: "diseases"    },
+  ];
+
+  useEffect(() => {
+    const h = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  return (
+    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",zIndex:150,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:"0" }}>
+      <div style={{ background:"linear-gradient(180deg,#0d2318,#0a1a0f)",border:"1px solid rgba(134,239,172,0.2)",borderRadius:"1.2rem 1.2rem 0 0",width:"100%",maxWidth:"520px",maxHeight:"90vh",overflowY:"auto",paddingBottom:"2rem" }}>
+
+        {/* Header with image */}
+        <div style={{ position:"relative",background:"linear-gradient(135deg,rgba(22,163,74,0.15),rgba(10,26,15,0.9))",padding:"1.5rem 1.2rem 1rem",borderBottom:"1px solid rgba(134,239,172,0.1)" }}>
+          <button onClick={onClose} style={{ position:"absolute",top:"1rem",right:"1rem",background:"rgba(255,255,255,0.08)",border:"none",borderRadius:"50%",width:32,height:32,color:"rgba(134,239,172,0.6)",cursor:"pointer",fontSize:"1.1rem",display:"flex",alignItems:"center",justifyContent:"center" }}>×</button>
+          <div style={{ display:"flex",gap:"1rem",alignItems:"center" }}>
+            {imageUrl && (
+              <img src={imageUrl} alt={plant.key} style={{ width:80,height:80,borderRadius:"0.7rem",objectFit:"cover",border:"1px solid rgba(134,239,172,0.2)",flexShrink:0 }} />
+            )}
+            <div>
+              <h2 style={{ margin:0,fontSize:"1.2rem",fontWeight:"600",color:"#86efac" }}>{plant.key}</h2>
+              <div style={{ fontSize:"0.78rem",color:"rgba(134,239,172,0.5)",fontStyle:"italic",marginTop:"0.2rem" }}>{plant.latin}</div>
+              {plant.note && <div style={{ fontSize:"0.76rem",color:"rgba(232,245,233,0.55)",marginTop:"0.4rem",lineHeight:"1.4" }}>{plant.note}</div>}
+            </div>
+          </div>
+        </div>
+
+        {/* Care sections */}
+        <div style={{ padding:"1rem" }}>
+          {Object.keys(care).length === 0 ? (
+            <div style={{ textAlign:"center",padding:"2rem",color:"rgba(134,239,172,0.3)",fontSize:"0.8rem" }}>
+              No detailed care info available for this plant yet.
+            </div>
+          ) : sections.map(({ icon, label, key }) => {
+            if (!care[key]) return null;
+            return (
+              <div key={key} style={{ background:"rgba(255,255,255,0.03)",border:"1px solid rgba(134,239,172,0.08)",borderRadius:"0.7rem",padding:"0.85rem 1rem",marginBottom:"0.5rem" }}>
+                <div style={{ display:"flex",alignItems:"center",gap:"0.5rem",marginBottom:"0.4rem" }}>
+                  <span style={{ fontSize:"1rem" }}>{icon}</span>
+                  <span style={{ fontSize:"0.75rem",fontWeight:"600",color:"#86efac",letterSpacing:"0.08em",textTransform:"uppercase" }}>{label}</span>
+                </div>
+                <div style={{ fontSize:"0.8rem",color:"rgba(232,245,233,0.65)",lineHeight:"1.6" }}>{care[key]}</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Remove button */}
+        <div style={{ padding:"0 1rem" }}>
+          <button onClick={()=>{ onRemove(plant.key); onClose(); }} style={{ width:"100%",background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:"0.7rem",padding:"0.7rem",color:"rgba(252,165,165,0.6)",cursor:"pointer",fontSize:"0.8rem",fontFamily:"inherit" }}>
+            Remove from collection
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Add Plant Modal ───────────────────────────────────────────────
 function AddPlantModal({ onClose, onAdd }) {
   const [mode,    setMode]    = useState("name"); // name | photo
@@ -481,6 +572,7 @@ export default function App() {
   const [weekKey]                         = useState(getWeekKey);
   const [showAdd,       setShowAdd]       = useState(false);
   const [showHealth,    setShowHealth]    = useState(false);
+  const [selectedPlant, setSelectedPlant] = useState(null);
   const [imgRefreshing, setImgRefreshing] = useState(false);
   const [syncStatus,    setSyncStatus]    = useState("idle"); // idle | syncing | synced | offline
 
@@ -489,34 +581,34 @@ export default function App() {
   const [waterChecked, setWaterChecked] = useState(() => lsGet(weekKey)?.water || {});
   const [mistChecked,  setMistChecked]  = useState(() => lsGet(weekKey)?.mist  || {});
 
-  const plants      = collection?.plants   || [];
-const schedule    = collection?.schedule || EMPTY_COLLECTION.schedule;
-const mistingData = collection?.misting  || EMPTY_COLLECTION.misting;
+  const { plants, schedule, misting: mistingData } = collection;
 
   // ── Load from shared DB on mount ────────────────────────────────
   useEffect(() => {
     setSyncStatus("syncing");
     readSharedCollection().then(remote => {
-  if (remote && remote.plants && remote.schedule && remote.misting) {
-    setCollection(remote);
-    if (remote.images) {
-      setPlantImages(prev => {
-        const merged = { ...prev, ...remote.images };
-        lsSet(STORAGE_IMAGES_KEY, merged);
-        return merged;
-      });
-    }
-    setSyncStatus("synced");
-  } else {
-    const local = lsGet("plant_collection_local");
-    if (local?.plants && local?.schedule && local?.misting) setCollection(local);
-    setSyncStatus("offline");
-  }
-}).catch(() => {
-  const local = lsGet("plant_collection_local");
-  if (local?.plants && local?.schedule && local?.misting) setCollection(local);
-  setSyncStatus("offline");
-});
+      if (remote) {
+        setCollection(remote);
+        // Merge images
+        if (remote.images) {
+          setPlantImages(prev => {
+            const merged = { ...prev, ...remote.images };
+            lsSet(STORAGE_IMAGES_KEY, merged);
+            return merged;
+          });
+        }
+        setSyncStatus("synced");
+      } else {
+        // Try local fallback
+        const local = lsGet("plant_collection_local");
+        if (local) setCollection(local);
+        setSyncStatus("offline");
+      }
+    }).catch(() => {
+      const local = lsGet("plant_collection_local");
+      if (local) setCollection(local);
+      setSyncStatus("offline");
+    });
   }, []);
 
   // ── Save collection to shared DB and localStorage ───────────────
@@ -557,7 +649,6 @@ const mistingData = collection?.misting  || EMPTY_COLLECTION.misting;
     };
     const t = setTimeout(refresh, 1500);
     return () => { cancelled = true; clearTimeout(t); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plants]);
 
   const toggleWater = (day,idx) => setWaterChecked(prev=>{const d={...(prev[day]||{})};d[idx]=!d[idx];return{...prev,[day]:d};});
@@ -622,6 +713,7 @@ const mistingData = collection?.misting  || EMPTY_COLLECTION.misting;
 
       {showAdd    && <AddPlantModal     onClose={()=>setShowAdd(false)}    onAdd={handleAddPlant} />}
       {showHealth && <HealthCheckModal  onClose={()=>setShowHealth(false)} plants={plants} images={plantImages} />}
+      {selectedPlant && <PlantDetailModal plant={selectedPlant} imageUrl={getImg(selectedPlant.key)} onClose={()=>setSelectedPlant(null)} onRemove={handleRemovePlant} />}
 
       {/* Header */}
       <div style={{ background:"linear-gradient(180deg,rgba(255,255,255,0.04) 0%,transparent 100%)",borderBottom:"1px solid rgba(134,239,172,0.15)",padding:"1.5rem 1.5rem 1.2rem",textAlign:"center" }}>
@@ -820,14 +912,13 @@ const mistingData = collection?.misting  || EMPTY_COLLECTION.misting;
               <button onClick={()=>setShowAdd(true)} style={{ background:"linear-gradient(135deg,#16a34a,#15803d)",border:"none",borderRadius:"2rem",padding:"0.8rem 2rem",color:"white",cursor:"pointer",fontSize:"0.9rem",fontFamily:"inherit",fontWeight:"600" }}>+ Add your first plant</button>
             </div>
           ) : plants.map((plant,i)=>(
-            <div key={i} style={{ display:"flex",gap:"0.9rem",alignItems:"center",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(134,239,172,0.08)",borderRadius:"0.7rem",padding:"0.7rem",marginBottom:"0.5rem" }}>
-              <PlantImg src={getImg(plant.key)} name={plant.key} size={64} />
+            <div key={i} onClick={()=>setSelectedPlant(plant)} style={{ display:"flex",gap:"0.9rem",alignItems:"center",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(134,239,172,0.08)",borderRadius:"0.7rem",padding:"0.7rem",marginBottom:"0.5rem",cursor:"pointer",transition:"all 0.2s ease" }}>
+              <PlantImg src={getImg(plant.key)} name={plant.key} size={56} />
               <div style={{ flex:1,minWidth:0 }}>
-                <div style={{ fontSize:"0.85rem",fontWeight:"600",color:"#86efac",marginBottom:"0.15rem" }}>{plant.key}</div>
-                <div style={{ fontSize:"0.7rem",color:"rgba(134,239,172,0.4)",fontStyle:"italic",marginBottom:"0.2rem" }}>{plant.latin}</div>
-                <div style={{ fontSize:"0.72rem",color:"rgba(232,245,233,0.5)",lineHeight:"1.3" }}>{plant.note}</div>
+                <div style={{ fontSize:"0.88rem",fontWeight:"600",color:"#86efac",marginBottom:"0.2rem" }}>{plant.key}</div>
+                <div style={{ fontSize:"0.72rem",color:"rgba(134,239,172,0.4)",fontStyle:"italic" }}>{plant.latin}</div>
               </div>
-              <button onClick={()=>handleRemovePlant(plant.key)} style={{ background:"rgba(239,68,68,0.1)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:"0.4rem",padding:"0.3rem 0.5rem",color:"rgba(252,165,165,0.6)",cursor:"pointer",fontSize:"0.7rem",fontFamily:"inherit",flexShrink:0 }}>Remove</button>
+              <div style={{ color:"rgba(134,239,172,0.3)",fontSize:"1rem",flexShrink:0 }}>›</div>
             </div>
           ))}
         </>}
