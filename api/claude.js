@@ -112,16 +112,21 @@ if (body.type === "read_collection") {
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await r.json();
-    const raw = data.result;
+    let parsed = data.result;
     let collection = null;
-    if (raw) {
-      let parsed = raw;
+    if (parsed) {
+      if (Array.isArray(parsed)) parsed = parsed[0];
       let attempts = 0;
-      while (typeof parsed === "string" && attempts < 10) {
+      while (typeof parsed === "string" && attempts < 15) {
         try { parsed = JSON.parse(parsed); attempts++; }
         catch { break; }
       }
-      collection = typeof parsed === "object" ? parsed : null;
+      if (Array.isArray(parsed)) parsed = parsed[0];
+      while (typeof parsed === "string" && attempts < 20) {
+        try { parsed = JSON.parse(parsed); attempts++; }
+        catch { break; }
+      }
+      collection = typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
     }
     return res.status(200).json({ collection });
   } catch (err) {
