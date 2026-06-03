@@ -581,7 +581,9 @@ export default function App() {
   const [waterChecked, setWaterChecked] = useState(() => lsGet(weekKey)?.water || {});
   const [mistChecked,  setMistChecked]  = useState(() => lsGet(weekKey)?.mist  || {});
 
-  const { plants, schedule, misting: mistingData } = collection;
+const plants      = collection?.plants   || [];
+const schedule    = collection?.schedule || EMPTY_COLLECTION.schedule;
+const mistingData = collection?.misting  || EMPTY_COLLECTION.misting;
 
   // ── Load from shared DB on mount ────────────────────────────────
   useEffect(() => {
@@ -655,7 +657,7 @@ export default function App() {
   const toggleWater = (day,idx) => setWaterChecked(prev=>{const d={...(prev[day]||{})};d[idx]=!d[idx];return{...prev,[day]:d};});
   const toggleMist  = (day,idx) => setMistChecked(prev=>{const d={...(prev[day]||{})};d[idx]=!d[idx];return{...prev,[day]:d};});
 
-  const isWaterDayComplete = (day) => { const dd = schedule.find(d=>d.day===day); if(!dd||!dd.tasks.length) return false; return dd.tasks.every((_,i)=>(waterChecked[day]||{})[i]); };
+  const isWaterDayComplete = (day) => { const dd = (schedule||[]).find(d=>d.day===day); if(!dd||!dd.tasks?.length) return false; return dd.tasks.every((_,i)=>(waterChecked[day]||{})[i]); };
   const isMistDayComplete  = (day) => { const pl = mistingData[day]; if(!pl?.length) return false; return pl.every((_,i)=>(mistChecked[day]||{})[i]); };
 
   const resetAll = () => {
@@ -697,10 +699,10 @@ export default function App() {
     saveCollection({ ...collection, plants:newPlants, schedule:newSchedule, misting:newMisting });
   };
 
-  const totalWater = schedule.reduce((s,d)=>s+d.tasks.length,0);
-  const doneWater  = schedule.reduce((s,d)=>s+d.tasks.filter((_,i)=>(waterChecked[d.day]||{})[i]).length,0);
-  const totalMist  = ALL_DAYS.reduce((s,day)=>s+(mistingData[day]||[]).length,0);
-  const doneMist   = ALL_DAYS.reduce((s,day)=>s+(mistingData[day]||[]).filter((_,i)=>(mistChecked[day]||{})[i]).length,0);
+const totalWater = (schedule||[]).reduce((s,d)=>s+(d.tasks||[]).length,0);
+const doneWater  = (schedule||[]).reduce((s,d)=>s+(d.tasks||[]).filter((_,i)=>(waterChecked[d.day]||{})[i]).length,0);
+const totalMist  = ALL_DAYS.reduce((s,day)=>s+(mistingData[day]||[]).length,0);
+const doneMist   = ALL_DAYS.reduce((s,day)=>s+(mistingData[day]||[]).filter((_,i)=>(mistChecked[day]||{})[i]).length,0);
   const doneAll    = doneWater+doneMist;
   const totalAll   = totalWater+totalMist;
   const allComplete = doneAll===totalAll && totalAll>0;
