@@ -4,77 +4,51 @@ export default async function handler(req, res) {
   }
 
   // ── Image search ─────────────────────────────────────────────
-  if (req.body.type === "image_search") {
-    try {
-      const plantName = req.body.plant || "";
-      const latinName = req.body.latin || "";
+ if (req.body.type === "image_search") {
+  try {
+    const plantName = req.body.plant || "";
+    const latinName = req.body.latin || "";
 
-      const queries = [
-        `${plantName} single potted plant close up leaves`,
-        `${latinName} potted houseplant close up`,
-        `${plantName} indoor plant leaves detail`,
-        `${plantName} houseplant`,
-      ];
+    // Try common name first, then latin name
+    const searchTerms = [latinName, plantName, `${plantName} plant`];
+    let imageUrl = null;
 
-      let bestPhoto = null;
+    for (const term of searchTerms) {
+      if (imageUrl) break;
+      if (!term.trim()) continue;
 
-      for (const query of queries) {
-        const encoded = encodeURIComponent(query);
-        const response = await fetch(
-          `https://api.unsplash.com/search/photos?query=${encoded}&per_page=5&orientation=squarish&content_filter=high`,
-          { headers: { "Authorization": `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}` } }
-        );
+      // Search Wikipedia for the page
+      const searchRes = await fetch(
+        `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(term)}&format=json&origin=*`
+      );
+      const searchData = await searchRes.json();
+      const firstResult = searchData?.query?.search?.[0];
+      if (!firstResult) continue;
 
-        if (!response.ok) {
-          console.error("Unsplash error:", response.status, await response.text());
-          continue;
-        }
+      const pageTitle = encodeURIComponent(firstResult.title);
 
-        const data = await response.json();
+      // Get the main image for that page
+      const imageRes = await fetch(
+        `https://en.wikipedia.org/w/api.php?action=query&titles=${pageTitle}&prop=pageimages&pithumbsize=400&format=json&origin=*`
+      );
+      const imageData = await imageRes.json();
+      const pages = imageData?.query?.pages;
+      const page = pages ? Object.values(pages)[0] : null;
+      const thumb = page?.thumbnail?.source;
 
-        if (data.results?.length > 0) {
-          let best = null;
-          let bestScore = -1;
-
-          for (const photo of data.results) {
-            const searchText = [
-              photo.alt_description || "",
-              photo.description || "",
-              ...(photo.tags?.map(t => t.title) || []),
-            ].join(" ").toLowerCase();
-
-            // Score based on plant name match
-            const plantWords = plantName.toLowerCase().split(" ").filter(w => w.length > 3);
-            let score = plantWords.filter(word => searchText.includes(word)).length * 3;
-
-            // Boost photos that suggest close-up single plant shots
-            const goodTerms = ["plant", "leaf", "leaves", "foliage", "potted", "houseplant", "indoor", "close", "detail", "green"];
-            score += goodTerms.filter(t => searchText.includes(t)).length;
-
-            // Penalise photos that suggest group shots or unrelated content
-            const badTerms = ["people", "person", "woman", "man", "food", "garden", "forest", "field", "flower market", "bouquet", "arrangement", "hands", "holding", "group", "collection"];
-            score -= badTerms.filter(t => searchText.includes(t)).length * 3;
-
-            if (score > bestScore) { bestScore = score; best = photo; }
-          }
-
-          bestPhoto = best || data.results[0];
-          break;
-        }
+      if (thumb) {
+        imageUrl = thumb;
+        break;
       }
-
-      if (bestPhoto) {
-        return res.status(200).json({
-          imageUrl: `${bestPhoto.urls.raw}&w=120&h=120&fit=crop&crop=entropy&auto=format`
-        });
-      }
-      return res.status(200).json({ imageUrl: null });
-
-    } catch (err) {
-      console.error("Image search error:", err.message);
-      return res.status(200).json({ imageUrl: null });
     }
+
+    return res.status(200).json({ imageUrl: imageUrl || null });
+
+  } catch (err) {
+    console.error("Wikipedia image error:", err.message);
+    return res.status(200).json({ imageUrl: null });
   }
+}
 
   // ── Claude request ────────────────────────────────────────────
   try {
