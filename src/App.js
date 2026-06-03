@@ -489,34 +489,34 @@ export default function App() {
   const [waterChecked, setWaterChecked] = useState(() => lsGet(weekKey)?.water || {});
   const [mistChecked,  setMistChecked]  = useState(() => lsGet(weekKey)?.mist  || {});
 
-  const { plants, schedule, misting: mistingData } = collection;
+  const plants      = collection?.plants   || [];
+const schedule    = collection?.schedule || EMPTY_COLLECTION.schedule;
+const mistingData = collection?.misting  || EMPTY_COLLECTION.misting;
 
   // ── Load from shared DB on mount ────────────────────────────────
   useEffect(() => {
     setSyncStatus("syncing");
     readSharedCollection().then(remote => {
-      if (remote) {
-        setCollection(remote);
-        // Merge images
-        if (remote.images) {
-          setPlantImages(prev => {
-            const merged = { ...prev, ...remote.images };
-            lsSet(STORAGE_IMAGES_KEY, merged);
-            return merged;
-          });
-        }
-        setSyncStatus("synced");
-      } else {
-        // Try local fallback
-        const local = lsGet("plant_collection_local");
-        if (local) setCollection(local);
-        setSyncStatus("offline");
-      }
-    }).catch(() => {
-      const local = lsGet("plant_collection_local");
-      if (local) setCollection(local);
-      setSyncStatus("offline");
-    });
+  if (remote && remote.plants && remote.schedule && remote.misting) {
+    setCollection(remote);
+    if (remote.images) {
+      setPlantImages(prev => {
+        const merged = { ...prev, ...remote.images };
+        lsSet(STORAGE_IMAGES_KEY, merged);
+        return merged;
+      });
+    }
+    setSyncStatus("synced");
+  } else {
+    const local = lsGet("plant_collection_local");
+    if (local?.plants && local?.schedule && local?.misting) setCollection(local);
+    setSyncStatus("offline");
+  }
+}).catch(() => {
+  const local = lsGet("plant_collection_local");
+  if (local?.plants && local?.schedule && local?.misting) setCollection(local);
+  setSyncStatus("offline");
+});
   }, []);
 
   // ── Save collection to shared DB and localStorage ───────────────
