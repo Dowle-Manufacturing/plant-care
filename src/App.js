@@ -351,47 +351,53 @@ export default function App() {
   }, []);
 
   // ── Auto-refresh all plant images on mount ─────────────────────
-  useEffect(() => {
-    const refreshImages = async (currentPlantList, currentImages, currentSchedule, currentMisting) => {
-      setImgRefreshing(true);
-      const updated = { ...currentImages };
-      let changed = false;
-      for (const plant of currentPlantList) {
-        try {
-          const url = await fetchPlantImage(plant.key, plant.latin);
-          if (url) {
-            updated[plant.key] = url;
-            changed = true;
-            // Update state incrementally so images appear as they load
-            setPlantImages(prev => ({ ...prev, [plant.key]: url }));
-          }
-        } catch {}
-        await new Promise(r => setTimeout(r, 600));
-      }
-      if (changed) {
-        savePlantData(updated, currentSchedule, currentMisting, currentPlantList);
-      }
-      setImgRefreshing(false);
-    };
-
-    // Small delay to let storage load first
-    const t = setTimeout(() => {
-      setPlantList(pl => {
-        setPlantImages(pi => {
-          setSchedule(sc => {
-            setMistingData(md => {
-              refreshImages(pl, pi, sc, md);
-              return md;
-            });
-            return sc;
-          });
-          return pi;
+ useEffect(() => {
+  const refreshImages = async () => {
+    setImgRefreshing(true);
+    const currentList = DEFAULT_PLANT_LIST;
+    const updated = {};
+    
+    for (const plant of currentList) {
+      try {
+        const res = await fetch("/api/claude", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "image_search",
+            plant: plant.key,
+            latin: plant.latin,
+          }),
         });
-        return pl;
+        const data = await res.json();
+        if (data.imageUrl) {
+          updated[plant.key] = data.imageUrl;
+          setPlantImages(prev => ({ ...prev, [plant.key]: data.imageUrl }));
+        }
+      } catch {}
+      await new Promise(r => setTimeout(r, 600));
+    }
+
+    if (Object.keys(updated).length > 0) {
+      setPlantImages(prev => {
+        const merged = { ...prev, ...updated };
+        if (window.storage) {
+          window.storage.get("plant_data").then(r => {
+            const existing = r?.value ? JSON.parse(r.value) : {};
+            window.storage.set("plant_data", JSON.stringify({
+              ...existing,
+              images: merged,
+            })).catch(() => {});
+          }).catch(() => {});
+        }
+        return merged;
       });
-    }, 1500);
-    return () => clearTimeout(t);
-  }, []); // runs once on mount
+    }
+    setImgRefreshing(false);
+  };
+
+  const t = setTimeout(refreshImages, 1500);
+  return () => clearTimeout(t);
+}, []);
 
   // ── Save checks ────────────────────────────────────────────────
   useEffect(() => {
