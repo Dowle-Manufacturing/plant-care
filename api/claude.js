@@ -15,10 +15,11 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
+    console.log("FULL RESPONSE:", JSON.stringify(data));
     res.status(200).json(data);
 
   } catch (err) {
-    console.error("Error:", err.message);
+    console.error("FULL ERROR:", err);
     res.status(500).json({ error: err.message });
   }
 }
