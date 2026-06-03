@@ -195,20 +195,22 @@ function AddPlantModal({ onClose, onAdd }) {
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
-  const search = async () => {
-    if (!query.trim()) return;
-    setStatus("loading");
-    setResult(null);
-    setErrMsg("");
-    try {
-      const data = await getPlantData(query.trim());
-      setResult(data);
-      setStatus("success");
-    } catch (e) {
-      setErrMsg("Couldn't find that plant. Try a different name or check spelling.");
-      setStatus("error");
-    }
-  };
+ const search = async () => {
+  if (!query.trim()) return;
+  setStatus("loading");
+  setResult(null);
+  setErrMsg("");
+  try {
+    const data = await getPlantData(query.trim());
+    console.log("Plant data received:", data);
+    setResult(data);
+    setStatus("success");
+  } catch (e) {
+    console.error("Search error:", e.message);
+    setErrMsg(`Error: ${e.message}`);
+    setStatus("error");
+  }
+};
 
   const steps = [
     "Searching the web for plant info...",
