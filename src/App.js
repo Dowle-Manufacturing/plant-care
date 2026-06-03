@@ -668,7 +668,7 @@ const mistingData = collection?.misting  || EMPTY_COLLECTION.misting;
 
   const handleAddPlant = (data) => {
     const name = data.commonName;
-    const newPlants   = [...plants, { key:name, latin:data.latinName, note:data.shortNote }];
+    const newPlants   = [...plants, { key:name, latin:data.latinName, note:data.shortNote, care:data.care||{} }];
     const newSchedule = schedule.map(dayObj => {
       const tasks = (data.wateringTasks||[]).filter(t=>t.day===dayObj.day);
       if (!tasks.length) return dayObj;
