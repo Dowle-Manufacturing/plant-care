@@ -140,7 +140,8 @@ async function fetchPlantImage(plantName, latinName) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         type: "image_search",
-        plant: `${plantName} ${latinName}`,
+        plant: plantName,
+        latin: latinName,
       }),
     });
     const data = await res.json();

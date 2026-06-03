@@ -3,10 +3,25 @@ export default async function handler(req, res) {
 
   // Handle image search requests
   if (req.body.type === "image_search") {
-    try {
-      const query = encodeURIComponent(`${req.body.plant} houseplant growing pot`);
+  try {
+    const plantName = req.body.plant;
+    
+    // Try increasingly specific queries until we get a good result
+   const plantName = req.body.plant;
+const latinName = req.body.latin || "";
+
+const queries = [
+  `${plantName} houseplant potted indoor`,
+  `${latinName} plant`,
+  `${plantName} plant`,
+];
+
+    let bestPhoto = null;
+
+    for (const query of queries) {
+      const encoded = encodeURIComponent(query);
       const response = await fetch(
-        `https://api.unsplash.com/search/photos?query=${query}&per_page=1&orientation=squarish`,
+        `https://api.unsplash.com/search/photos?query=${encoded}&per_page=5&orientation=squarish&content_filter=high`,
         {
           headers: {
             "Authorization": `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}`,
@@ -14,18 +29,47 @@ export default async function handler(req, res) {
         }
       );
       const data = await response.json();
-      const photo = data.results?.[0];
-      if (photo) {
-        const url = `${photo.urls.raw}&w=120&h=120&fit=crop`;
-        res.status(200).json({ imageUrl: url });
-      } else {
-        res.status(200).json({ imageUrl: null });
+      
+      if (data.results?.length > 0) {
+        // Pick the photo whose description/alt best matches the plant name
+        const plantWords = plantName.toLowerCase().split(" ");
+        let best = null;
+        let bestScore = -1;
+
+        for (const photo of data.results) {
+          const searchText = [
+            photo.alt_description || "",
+            photo.description || "",
+            ...(photo.tags?.map(t => t.title) || []),
+          ].join(" ").toLowerCase();
+
+          const score = plantWords.filter(word => 
+            word.length > 3 && searchText.includes(word)
+          ).length;
+
+          if (score > bestScore) {
+            bestScore = score;
+            best = photo;
+          }
+        }
+
+        bestPhoto = best || data.results[0];
+        break;
       }
-    } catch (err) {
-      res.status(500).json({ error: err.message });
     }
-    return;
+
+    if (bestPhoto) {
+      const url = `${bestPhoto.urls.raw}&w=120&h=120&fit=crop&auto=format`;
+      res.status(200).json({ imageUrl: url });
+    } else {
+      res.status(200).json({ imageUrl: null });
+    }
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
+  return;
+}
 
   // Handle Claude requests
   try {
