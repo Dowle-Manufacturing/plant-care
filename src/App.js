@@ -221,7 +221,8 @@ function AddPlantModal({ onClose, onAdd }) {
   const [stepIdx, setStepIdx] = useState(0);
   useEffect(() => {
     if (status !== "loading") { setStepIdx(0); return; }
-    const t = setInterval(() => setStepIdx(i => (i + 1) % steps.length), 1200);
+    const stepsLen = 4;
+    const t = setInterval(() => setStepIdx(i => (i + 1) % stepsLen), 1200);
     return () => clearInterval(t);
   }, [status]);
 

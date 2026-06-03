@@ -1,6 +1,9 @@
 {
-  "name": "plant-carecd",
+  "name": "plant-care",
+  "homepage": ".",
   "version": "0.1.0",
+  ...
+}
   "private": true,
   "dependencies": {
     "@testing-library/dom": "^10.4.1",
