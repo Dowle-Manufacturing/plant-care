@@ -134,30 +134,17 @@ async function askClaude(prompt) {
 }
 
 async function fetchPlantImage(plantName, latinName) {
-  const prompt = `I need an Unsplash image URL for the houseplant "${plantName}" (latin name: ${latinName}).
-
-STRICT requirements for the image:
-- Must show the ACTUAL LIVING PLANT itself growing in a pot or natural habitat
-- Must be a real photograph, NOT an illustration or drawing
-- The plant must be the main subject and clearly identifiable as ${plantName}
-- NOT just flowers, seeds, or fruit in isolation
-- NOT a product listing or shop photo
-
-Return ONLY this raw JSON object with no markdown or explanation:
-{
-  "imageUrl": "https://images.unsplash.com/photo-XXXXXXXXXX?w=120&h=120&fit=crop"
-}
-
-Choose the most accurate Unsplash photo ID you know for this specific plant. The photo ID must be real and exist on Unsplash.`;
-
   try {
-    const raw = await askClaude(prompt);
-    const clean = raw.replace(/```json|```/g, "").trim();
-    const start = clean.indexOf("{");
-    const end = clean.lastIndexOf("}");
-    if (start === -1 || end === -1) return null;
-    const parsed = JSON.parse(clean.slice(start, end + 1));
-    return parsed.imageUrl || null;
+    const res = await fetch("/api/claude", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "image_search",
+        plant: `${plantName} ${latinName}`,
+      }),
+    });
+    const data = await res.json();
+    return data.imageUrl || null;
   } catch {
     return null;
   }
