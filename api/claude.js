@@ -42,30 +42,32 @@ if (req.body.type === "image_search") {
       } catch {}
     }
 
-    // ── Fall back to Google Custom Search ───────────────────
-    if (!imageUrl && process.env.GOOGLE_SEARCH_API_KEY && process.env.GOOGLE_SEARCH_CX) {
-      try {
-        const query = encodeURIComponent(`${latinName} plant photograph`);
-        const googleRes = await fetch(
-          `https://www.googleapis.com/customsearch/v1?key=${process.env.GOOGLE_SEARCH_API_KEY}&cx=${process.env.GOOGLE_SEARCH_CX}&q=${query}&searchType=image&num=5&imgType=photo&imgSize=medium`
-        );
-        const googleData = await googleRes.json();
-        const items = googleData?.items || [];
-        for (const item of items) {
-          const url = item.link;
-          if (url && (url.endsWith(".jpg") || url.endsWith(".jpeg") || url.endsWith(".png") || url.includes("jpg") || url.includes("png"))) {
-            imageUrl = url;
-            break;
-          }
-        }
-      } catch {}
+// ── Fall back to Google Custom Search ───────────────────
+console.log("Wikipedia result:", imageUrl ? "found" : "not found");
+console.log("Google key exists:", !!process.env.GOOGLE_SEARCH_API_KEY);
+console.log("Google CX exists:", !!process.env.GOOGLE_SEARCH_CX);
+
+if (!imageUrl) {
+  if (!process.env.GOOGLE_SEARCH_API_KEY || !process.env.GOOGLE_SEARCH_CX) {
+    console.log("Google fallback skipped — env vars missing");
+  } else {
+    try {
+      const query = encodeURIComponent(`${latinName} plant photograph`);
+      const googleUrl = `https://www.googleapis.com/customsearch/v1?key=${process.env.GOOGLE_SEARCH_API_KEY}&cx=${process.env.GOOGLE_SEARCH_CX}&q=${query}&searchType=image&num=5&imgType=photo&imgSize=medium`;
+      console.log("Calling Google:", googleUrl.slice(0, 80));
+      const googleRes = await fetch(googleUrl);
+      console.log("Google status:", googleRes.status);
+      const googleData = await googleRes.json();
+      console.log("Google response:", JSON.stringify(googleData).slice(0, 300));
+      const items = googleData?.items || [];
+      for (const item of items) {
+        const url = item.link;
+        if (url) { imageUrl = url; break; }
+      }
+      console.log("Google result:", imageUrl ? "found" : "not found");
+    } catch (err) {
+      console.error("Google fallback error:", err.message);
     }
-
-    return res.status(200).json({ imageUrl: imageUrl || null });
-
-  } catch (err) {
-    console.error("Image search error:", err.message);
-    return res.status(200).json({ imageUrl: null });
   }
 }
   // ── Read shared plant collection ──────────────────────────────
