@@ -11,7 +11,15 @@ if (req.body.type === "image_search") {
     let imageUrl = null;
 
     // ── Try Wikipedia first ──────────────────────────────────
-    const searchTerms = [latinName, plantName, `${plantName} plant`];
+    const searchTerms = [
+  latinName,
+  plantName,
+  `${latinName} plant`,
+  `${plantName} houseplant`,
+  // Specific fallbacks for tricky plants
+  latinName.split(" ")[0], // Just the genus e.g. "Echeveria" or "Calathea"
+  `${latinName.split(" ")[0]} plant`,
+];
     for (const term of searchTerms) {
       if (imageUrl) break;
       if (!term.trim()) continue;
@@ -37,7 +45,7 @@ if (req.body.type === "image_search") {
     // ── Fall back to Google Custom Search ───────────────────
     if (!imageUrl && process.env.GOOGLE_SEARCH_API_KEY && process.env.GOOGLE_SEARCH_CX) {
       try {
-        const query = encodeURIComponent(`${plantName} ${latinName} houseplant`);
+        const query = encodeURIComponent(`${latinName} plant photograph`);
         const googleRes = await fetch(
           `https://www.googleapis.com/customsearch/v1?key=${process.env.GOOGLE_SEARCH_API_KEY}&cx=${process.env.GOOGLE_SEARCH_CX}&q=${query}&searchType=image&num=5&imgType=photo&imgSize=medium`
         );
