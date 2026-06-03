@@ -23,4 +23,5 @@ export default async function handler(req, res) {
     console.error("Error:", err.message);
     res.status(500).json({ error: err.message });
   }
+  console.log("Key exists:", !!process.env.ANTHROPIC_API_KEY);
 }
