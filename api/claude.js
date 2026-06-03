@@ -38,16 +38,28 @@ export default async function handler(req, res) {
     const cx     = process.env.GOOGLE_SEARCH_CX;
   if (apiKey && cx) {
   try {
-    console.log("Trying Google for:", plantName, "| key:", !!apiKey, "| cx:", !!cx);
-    const query = encodeURIComponent(`${latinName || plantName} plant`);
-        const googleRes = await fetch(
-          `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${query}&searchType=image&num=3&imgType=photo`
-        );
-        if (googleRes.ok) {
-          const googleData = await googleRes.json();
-          const first = googleData?.items?.[0];
-          if (first?.link) imageUrl = first.link;
-        }
+console.log("Trying Google for:", plantName, "| key:", !!apiKey, "| cx:", !!cx);
+const query = encodeURIComponent(`${latinName || plantName} houseplant`);
+const googleRes = await fetch(
+  `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${query}&searchType=image&num=5&imgType=photo&imgSize=medium&safe=active`
+);
+console.log("Google status:", googleRes.status);
+if (googleRes.ok) {
+  const googleData = await googleRes.json();
+  console.log("Google items:", googleData?.items?.length || 0);
+  console.log("Google error:", JSON.stringify(googleData?.error || null));
+  const items = googleData?.items || [];
+  for (const item of items) {
+    if (item?.link) {
+      console.log("Google image found:", item.link.slice(0, 60));
+      imageUrl = item.link;
+      break;
+    }
+  }
+} else {
+  const errText = await googleRes.text();
+  console.log("Google error response:", errText.slice(0, 200));
+}
       } catch {}
     }
 
