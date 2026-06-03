@@ -447,16 +447,18 @@ function AddPlantModal({ onClose, onAdd }) {
   const search = async () => {
     if (!query.trim()) return;
     setStatus("loading"); setResult(null); setErrMsg("");
-    try {
+   try {
       const data = await getPlantData(query.trim());
       console.log("Plant data received:", JSON.stringify(data).slice(0, 500));
       console.log("Care object:", JSON.stringify(data.care));
       const imageUrl = await searchWikiImage(data.commonName, data.latinName);
       data.imageUrl = imageUrl;
       setResult(data); setStatus("success");
+    } catch(e) {
+      setErrMsg(`Could not find plant: ${e.message}`);
+      setStatus("error");
     }
   };
-
   const searchByPhoto = async (b64, mime) => {
     setStatus("loading"); setResult(null); setErrMsg("");
     try {
