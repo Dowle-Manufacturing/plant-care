@@ -28,21 +28,37 @@ export default async function handler(req, res) {
 
   // ── Wikipedia + Google image search ──────────────────────────
   if (body.type === "image_search") {
-    try {
-      const plantName = body.plant || "";
-      const latinName = body.latin || "";
-      let imageUrl = null;
+  try {
+    const plantName = body.plant || "";
+    const latinName = body.latin || "";
+    let imageUrl = null;
 
-      // Try Wikipedia
+    // ── Try Google first ─────────────────────────────────────
+    const apiKey = process.env.GOOGLE_SEARCH_API_KEY;
+    const cx     = process.env.GOOGLE_SEARCH_CX;
+    if (apiKey && cx) {
+      try {
+        const query = encodeURIComponent(`${latinName || plantName} plant`);
+        const googleRes = await fetch(
+          `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${query}&searchType=image&num=3&imgType=photo`
+        );
+        if (googleRes.ok) {
+          const googleData = await googleRes.json();
+          const first = googleData?.items?.[0];
+          if (first?.link) imageUrl = first.link;
+        }
+      } catch {}
+    }
+
+    // ── Fall back to Wikipedia ────────────────────────────────
+    if (!imageUrl) {
       const searchTerms = [
         latinName,
         plantName,
         `${latinName} plant`,
         `${plantName} houseplant`,
         latinName.split(" ")[0],
-        `${latinName.split(" ")[0]} plant`,
       ];
-
       for (const term of searchTerms) {
         if (imageUrl) break;
         if (!term.trim()) continue;
@@ -64,33 +80,15 @@ export default async function handler(req, res) {
           if (thumb) { imageUrl = thumb; break; }
         } catch {}
       }
-
-      // Try Google fallback
-      if (!imageUrl) {
-        const apiKey = process.env.GOOGLE_SEARCH_API_KEY;
-        const cx     = process.env.GOOGLE_SEARCH_CX;
-        if (apiKey && cx) {
-          try {
-            const query = encodeURIComponent(`${latinName || plantName} plant`);
-            const googleRes = await fetch(
-              `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${query}&searchType=image&num=5&imgType=photo`
-            );
-            if (googleRes.ok) {
-              const googleData = await googleRes.json();
-              const first = googleData?.items?.[0];
-              if (first?.link) imageUrl = first.link;
-            }
-          } catch {}
-        }
-      }
-
-      return res.status(200).json({ imageUrl: imageUrl || null });
-
-    } catch (err) {
-      console.error("Image search error:", err.message);
-      return res.status(200).json({ imageUrl: null });
     }
+
+    return res.status(200).json({ imageUrl: imageUrl || null });
+
+  } catch (err) {
+    console.error("Image search error:", err.message);
+    return res.status(200).json({ imageUrl: null });
   }
+}
 
   // ── Read shared collection from Upstash ───────────────────────
   if (body.type === "read_collection") {
