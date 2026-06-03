@@ -22,81 +22,87 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // ── Make sure body is parsed ──────────────────────────────────
   const body = req.body;
   if (!body) return res.status(400).json({ error: "No body" });
 
-  // ── Wikipedia + Google image search ──────────────────────────
+  // ── Pexels + Wikipedia image search ──────────────────────────
   if (body.type === "image_search") {
-  try {
-    const plantName = body.plant || "";
-    const latinName = body.latin || "";
-    let imageUrl = null;
+    try {
+      const plantName = body.plant || "";
+      const latinName = body.latin || "";
+      let imageUrl = null;
 
-    // ── Try Google first ─────────────────────────────────────
-    const apiKey = process.env.GOOGLE_SEARCH_API_KEY;
-    const cx     = process.env.GOOGLE_SEARCH_CX;
-if (apiKey && cx) {
-  try {
-    console.log("Trying Google for:", plantName, "| key:", !!apiKey, "| cx:", !!cx);
-    const query = encodeURIComponent(`${latinName || plantName} plant`);
-    const googleRes = await fetch(
-      `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${query}&searchType=image&num=3`
-    );
-    console.log("Google status:", googleRes.status);
-    if (googleRes.ok) {
-      const googleData = await googleRes.json();
-      console.log("Google items:", googleData?.items?.length || 0);
-      const first = googleData?.items?.[0];
-      if (first?.link) imageUrl = first.link;
-    } else {
-      const errText = await googleRes.text();
-      console.log("Google error:", errText.slice(0, 300));
-    }
-  } catch {}
-}
-
-    // ── Fall back to Wikipedia ────────────────────────────────
-    if (!imageUrl) {
-      const searchTerms = [
-        latinName,
-        plantName,
-        `${latinName} plant`,
-        `${plantName} houseplant`,
-        latinName.split(" ")[0],
-      ];
-      for (const term of searchTerms) {
-        if (imageUrl) break;
-        if (!term.trim()) continue;
+      // ── Try Pexels first ──────────────────────────────────────
+      const pexelsKey = process.env.PEXELS_API_KEY;
+      if (pexelsKey) {
         try {
-          const searchRes = await fetch(
-            `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(term)}&format=json&origin=*`
-          );
-          const searchData = await searchRes.json();
-          const firstResult = searchData?.query?.search?.[0];
-          if (!firstResult) continue;
-          const pageTitle = encodeURIComponent(firstResult.title);
-          const imageRes = await fetch(
-            `https://en.wikipedia.org/w/api.php?action=query&titles=${pageTitle}&prop=pageimages&pithumbsize=600&format=json&origin=*`
-          );
-          const imageData = await imageRes.json();
-          const pages = imageData?.query?.pages;
-          const page = pages ? Object.values(pages)[0] : null;
-          const thumb = page?.thumbnail?.source;
-          if (thumb) { imageUrl = thumb; break; }
-        } catch {}
+          const queries = [
+            `${latinName} plant`,
+            `${plantName} plant`,
+            `${plantName} houseplant`,
+            plantName,
+          ];
+          for (const query of queries) {
+            if (imageUrl) break;
+            const pexelsRes = await fetch(
+              `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=5&orientation=square`,
+              { headers: { Authorization: pexelsKey } }
+            );
+            if (pexelsRes.ok) {
+              const pexelsData = await pexelsRes.json();
+              const photo = pexelsData?.photos?.[0];
+              if (photo?.src?.medium) {
+                imageUrl = photo.src.medium;
+                break;
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Pexels error:", err.message);
+        }
       }
+
+      // ── Fall back to Wikipedia ────────────────────────────────
+      if (!imageUrl) {
+        const searchTerms = [
+          latinName,
+          plantName,
+          `${latinName} plant`,
+          `${plantName} houseplant`,
+          latinName.split(" ")[0],
+        ];
+        for (const term of searchTerms) {
+          if (imageUrl) break;
+          if (!term.trim()) continue;
+          try {
+            const searchRes = await fetch(
+              `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(term)}&format=json&origin=*`
+            );
+            const searchData = await searchRes.json();
+            const firstResult = searchData?.query?.search?.[0];
+            if (!firstResult) continue;
+            const pageTitle = encodeURIComponent(firstResult.title);
+            const imageRes = await fetch(
+              `https://en.wikipedia.org/w/api.php?action=query&titles=${pageTitle}&prop=pageimages&pithumbsize=600&format=json&origin=*`
+            );
+            const imageData = await imageRes.json();
+            const pages = imageData?.query?.pages;
+            const page = pages ? Object.values(pages)[0] : null;
+            const thumb = page?.thumbnail?.source;
+            if (thumb) { imageUrl = thumb; break; }
+          } catch {}
+        }
+      }
+
+      return res.status(200).json({ imageUrl: imageUrl || null });
+
+    } catch (err) {
+      console.error("Image search error:", err.message);
+      return res.status(200).json({ imageUrl: null });
     }
-
-    return res.status(200).json({ imageUrl: imageUrl || null });
-
-  } catch (err) {
-    console.error("Image search error:", err.message);
-    return res.status(200).json({ imageUrl: null });
   }
-}
 
-  // ── Read shared collection from Upstash ───────────────────────
+  // ── Read shared collection from Upstash ──────────────────────
   if (body.type === "read_collection") {
     try {
       const url   = process.env.UPSTASH_REDIS_REST_URL;
@@ -140,7 +146,6 @@ if (apiKey && cx) {
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) return res.status(500).json({ error: "Missing ANTHROPIC_API_KEY" });
-
     if (!body.messages || !Array.isArray(body.messages)) {
       return res.status(400).json({ error: "Invalid messages" });
     }
