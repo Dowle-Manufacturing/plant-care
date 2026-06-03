@@ -1,141 +1,171 @@
 export default async function handler(req, res) {
+
+  // ── GET request — proxy images ────────────────────────────────
+  if (req.method === "GET") {
+    const imgUrl = req.query.img;
+    if (!imgUrl) return res.status(400).end();
+    try {
+      const response = await fetch(decodeURIComponent(imgUrl), {
+        headers: { "User-Agent": "Mozilla/5.0 PlantCareApp/1.0" },
+      });
+      const buffer = await response.arrayBuffer();
+      const contentType = response.headers.get("content-type") || "image/jpeg";
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      return res.send(Buffer.from(buffer));
+    } catch {
+      return res.status(404).end();
+    }
+  }
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // ── Wikipedia image search ────────────────────────────────────
-if (req.body.type === "image_search") {
-  try {
-    const plantName = req.body.plant || "";
-    const latinName = req.body.latin || "";
-    let imageUrl = null;
+  // ── Make sure body is parsed ──────────────────────────────────
+  const body = req.body;
+  if (!body) return res.status(400).json({ error: "No body" });
 
-    // ── Try Wikipedia first ──────────────────────────────────
-    const searchTerms = [
-  latinName,
-  plantName,
-  `${latinName} plant`,
-  `${plantName} houseplant`,
-  // Specific fallbacks for tricky plants
-  latinName.split(" ")[0], // Just the genus e.g. "Echeveria" or "Calathea"
-  `${latinName.split(" ")[0]} plant`,
-];
-    for (const term of searchTerms) {
-      if (imageUrl) break;
-      if (!term.trim()) continue;
-      try {
-        const searchRes = await fetch(
-          `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(term)}&format=json&origin=*`
-        );
-        const searchData = await searchRes.json();
-        const firstResult = searchData?.query?.search?.[0];
-        if (!firstResult) continue;
-        const pageTitle = encodeURIComponent(firstResult.title);
-        const imageRes = await fetch(
-          `https://en.wikipedia.org/w/api.php?action=query&titles=${pageTitle}&prop=pageimages&pithumbsize=600&format=json&origin=*`
-        );
-        const imageData = await imageRes.json();
-        const pages = imageData?.query?.pages;
-        const page = pages ? Object.values(pages)[0] : null;
-        const thumb = page?.thumbnail?.source;
-        if (thumb) { imageUrl = thumb; break; }
-      } catch {}
-    }
-
-// ── Fall back to Google Custom Search ───────────────────
-console.log("Wikipedia result:", imageUrl ? "found" : "not found");
-console.log("Google key exists:", !!process.env.GOOGLE_SEARCH_API_KEY);
-console.log("Google CX exists:", !!process.env.GOOGLE_SEARCH_CX);
-
-if (!imageUrl) {
-  if (!process.env.GOOGLE_SEARCH_API_KEY || !process.env.GOOGLE_SEARCH_CX) {
-    console.log("Google fallback skipped — env vars missing");
-  } else {
+  // ── Wikipedia + Google image search ──────────────────────────
+  if (body.type === "image_search") {
     try {
-      const query = encodeURIComponent(`${latinName} plant photograph`);
-      const googleUrl = `https://www.googleapis.com/customsearch/v1?key=${process.env.GOOGLE_SEARCH_API_KEY}&cx=${process.env.GOOGLE_SEARCH_CX}&q=${query}&searchType=image&num=5&imgType=photo&imgSize=medium`;
-      console.log("Calling Google:", googleUrl.slice(0, 80));
-      const googleRes = await fetch(googleUrl);
-      console.log("Google status:", googleRes.status);
-      const googleData = await googleRes.json();
-      console.log("Google response:", JSON.stringify(googleData).slice(0, 300));
-      const items = googleData?.items || [];
-      for (const item of items) {
-        const url = item.link;
-        if (url) { imageUrl = url; break; }
+      const plantName = body.plant || "";
+      const latinName = body.latin || "";
+      let imageUrl = null;
+
+      // Try Wikipedia
+      const searchTerms = [
+        latinName,
+        plantName,
+        `${latinName} plant`,
+        `${plantName} houseplant`,
+        latinName.split(" ")[0],
+        `${latinName.split(" ")[0]} plant`,
+      ];
+
+      for (const term of searchTerms) {
+        if (imageUrl) break;
+        if (!term.trim()) continue;
+        try {
+          const searchRes = await fetch(
+            `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(term)}&format=json&origin=*`
+          );
+          const searchData = await searchRes.json();
+          const firstResult = searchData?.query?.search?.[0];
+          if (!firstResult) continue;
+          const pageTitle = encodeURIComponent(firstResult.title);
+          const imageRes = await fetch(
+            `https://en.wikipedia.org/w/api.php?action=query&titles=${pageTitle}&prop=pageimages&pithumbsize=600&format=json&origin=*`
+          );
+          const imageData = await imageRes.json();
+          const pages = imageData?.query?.pages;
+          const page = pages ? Object.values(pages)[0] : null;
+          const thumb = page?.thumbnail?.source;
+          if (thumb) { imageUrl = thumb; break; }
+        } catch {}
       }
-      console.log("Google result:", imageUrl ? "found" : "not found");
+
+      // Try Google fallback
+      if (!imageUrl) {
+        const apiKey = process.env.GOOGLE_SEARCH_API_KEY;
+        const cx     = process.env.GOOGLE_SEARCH_CX;
+        if (apiKey && cx) {
+          try {
+            const query = encodeURIComponent(`${latinName || plantName} plant`);
+            const googleRes = await fetch(
+              `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${query}&searchType=image&num=5&imgType=photo`
+            );
+            if (googleRes.ok) {
+              const googleData = await googleRes.json();
+              const first = googleData?.items?.[0];
+              if (first?.link) imageUrl = first.link;
+            }
+          } catch {}
+        }
+      }
+
+      return res.status(200).json({ imageUrl: imageUrl || null });
+
     } catch (err) {
-      console.error("Google fallback error:", err.message);
+      console.error("Image search error:", err.message);
+      return res.status(200).json({ imageUrl: null });
     }
   }
-}
-  // ── Read shared plant collection ──────────────────────────────
-  if (req.body.type === "read_collection") {
+
+  // ── Read shared collection from Upstash ───────────────────────
+  if (body.type === "read_collection") {
     try {
-      if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
-        return res.status(200).json({ collection: null, error: "No database configured" });
-      }
-      const r = await fetch(`${process.env.UPSTASH_REDIS_REST_URL}/get/plant_collection`, {
-        headers: { Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}` },
+      const url   = process.env.UPSTASH_REDIS_REST_URL;
+      const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+      if (!url || !token) return res.status(200).json({ collection: null });
+      const r = await fetch(`${url}/get/plant_collection`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await r.json();
       const collection = data.result ? JSON.parse(data.result) : null;
       return res.status(200).json({ collection });
     } catch (err) {
-      return res.status(200).json({ collection: null, error: err.message });
+      console.error("Read collection error:", err.message);
+      return res.status(200).json({ collection: null });
     }
   }
 
-  // ── Write shared plant collection ─────────────────────────────
-  if (req.body.type === "write_collection") {
+  // ── Write shared collection to Upstash ────────────────────────
+  if (body.type === "write_collection") {
     try {
-      if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
-        return res.status(200).json({ ok: false, error: "No database configured" });
-      }
-      const payload = JSON.stringify(req.body.collection);
-      await fetch(`${process.env.UPSTASH_REDIS_REST_URL}/set/plant_collection`, {
+      const url   = process.env.UPSTASH_REDIS_REST_URL;
+      const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+      if (!url || !token) return res.status(200).json({ ok: false });
+      const payload = JSON.stringify(body.collection);
+      await fetch(`${url}/set/plant_collection`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify([payload]),
       });
       return res.status(200).json({ ok: true });
     } catch (err) {
-      return res.status(200).json({ ok: false, error: err.message });
+      console.error("Write collection error:", err.message);
+      return res.status(200).json({ ok: false });
     }
   }
 
   // ── Claude AI request ─────────────────────────────────────────
   try {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return res.status(500).json({ error: "Missing API key" });
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: "Missing ANTHROPIC_API_KEY" });
+
+    if (!body.messages || !Array.isArray(body.messages)) {
+      return res.status(400).json({ error: "Invalid messages" });
     }
-    if (!req.body.messages || !Array.isArray(req.body.messages)) {
-      return res.status(400).json({ error: "Invalid messages format" });
-    }
+
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        "x-api-key": apiKey,
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
         max_tokens: 1500,
-        messages: req.body.messages,
+        messages: body.messages,
       }),
     });
+
     if (!response.ok) {
       const errText = await response.text();
+      console.error("Anthropic error:", response.status, errText);
       return res.status(response.status).json({ error: errText });
     }
+
     const data = await response.json();
     return res.status(200).json(data);
+
   } catch (err) {
+    console.error("Claude error:", err.message);
     return res.status(500).json({ error: err.message });
   }
 }
