@@ -615,7 +615,8 @@ const mistingData = collection?.misting  || EMPTY_COLLECTION.misting;
   }, []);
 
   // ── Save collection to shared DB and localStorage ───────────────
-  const saveCollection = useCallback((newCollection) => {
+const saveCollection = useCallback((newCollection) => {
+    console.log("Saving collection, plants count:", newCollection?.plants?.length);
     const withImages = { ...newCollection, images: lsGet(STORAGE_IMAGES_KEY) || {} };
     setCollection(newCollection);
     lsSet("plant_collection_local", newCollection);
@@ -668,6 +669,7 @@ const mistingData = collection?.misting  || EMPTY_COLLECTION.misting;
 
   const handleAddPlant = (data) => {
     const name = data.commonName;
+	 console.log("Adding plant:", name, "care keys:", Object.keys(data.care||{}));
     const newPlants   = [...plants, { key:name, latin:data.latinName, note:data.shortNote, care:data.care||{} }];
     const newSchedule = schedule.map(dayObj => {
       const tasks = (data.wateringTasks||[]).filter(t=>t.day===dayObj.day);
