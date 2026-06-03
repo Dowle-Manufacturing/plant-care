@@ -1,78 +1,80 @@
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end();
-
-  // Handle image search requests
-  if (req.body.type === "image_search") {
-  try {
-    const plantName = req.body.plant;
-    
-    // Try increasingly specific queries until we get a good result
-   const plantName = req.body.plant;
-const latinName = req.body.latin || "";
-
-const queries = [
-  `${plantName} houseplant potted indoor`,
-  `${latinName} plant`,
-  `${plantName} plant`,
-];
-
-    let bestPhoto = null;
-
-    for (const query of queries) {
-      const encoded = encodeURIComponent(query);
-      const response = await fetch(
-        `https://api.unsplash.com/search/photos?query=${encoded}&per_page=5&orientation=squarish&content_filter=high`,
-        {
-          headers: {
-            "Authorization": `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}`,
-          },
-        }
-      );
-      const data = await response.json();
-      
-      if (data.results?.length > 0) {
-        // Pick the photo whose description/alt best matches the plant name
-        const plantWords = plantName.toLowerCase().split(" ");
-        let best = null;
-        let bestScore = -1;
-
-        for (const photo of data.results) {
-          const searchText = [
-            photo.alt_description || "",
-            photo.description || "",
-            ...(photo.tags?.map(t => t.title) || []),
-          ].join(" ").toLowerCase();
-
-          const score = plantWords.filter(word => 
-            word.length > 3 && searchText.includes(word)
-          ).length;
-
-          if (score > bestScore) {
-            bestScore = score;
-            best = photo;
-          }
-        }
-
-        bestPhoto = best || data.results[0];
-        break;
-      }
-    }
-
-    if (bestPhoto) {
-      const url = `${bestPhoto.urls.raw}&w=120&h=120&fit=crop&auto=format`;
-      res.status(200).json({ imageUrl: url });
-    } else {
-      res.status(200).json({ imageUrl: null });
-    }
-
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
-  return;
-}
 
-  // Handle Claude requests
+  // Image search
+  if (req.body.type === "image_search") {
+    try {
+      const plantName = req.body.plant || "";
+      const latinName = req.body.latin || "";
+
+      const queries = [
+        `${plantName} houseplant potted indoor`,
+        `${latinName} plant`,
+        `${plantName} plant`,
+      ];
+
+      let bestPhoto = null;
+
+      for (const query of queries) {
+        const encoded = encodeURIComponent(query);
+        const response = await fetch(
+          `https://api.unsplash.com/search/photos?query=${encoded}&per_page=5&orientation=squarish&content_filter=high`,
+          { headers: { "Authorization": `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}` } }
+        );
+
+        if (!response.ok) {
+          console.error("Unsplash error:", response.status, await response.text());
+          continue;
+        }
+
+        const data = await response.json();
+
+        if (data.results?.length > 0) {
+          const plantWords = plantName.toLowerCase().split(" ").filter(w => w.length > 3);
+          let best = null;
+          let bestScore = -1;
+
+          for (const photo of data.results) {
+            const searchText = [
+              photo.alt_description || "",
+              photo.description || "",
+              ...(photo.tags?.map(t => t.title) || []),
+            ].join(" ").toLowerCase();
+
+            const score = plantWords.filter(word => searchText.includes(word)).length;
+            if (score > bestScore) { bestScore = score; best = photo; }
+          }
+
+          bestPhoto = best || data.results[0];
+          break;
+        }
+      }
+
+      if (bestPhoto) {
+        return res.status(200).json({
+          imageUrl: `${bestPhoto.urls.raw}&w=120&h=120&fit=crop&auto=format`
+        });
+      }
+      return res.status(200).json({ imageUrl: null });
+
+    } catch (err) {
+      console.error("Image search error:", err.message);
+      return res.status(200).json({ imageUrl: null });
+    }
+  }
+
+  // Claude request
   try {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.status(500).json({ error: "Missing API key" });
+    }
+
+    if (!req.body.messages || !Array.isArray(req.body.messages)) {
+      return res.status(400).json({ error: "Invalid messages format" });
+    }
+
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -86,9 +88,18 @@ const queries = [
         messages: req.body.messages,
       }),
     });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("Anthropic error:", response.status, errText);
+      return res.status(response.status).json({ error: errText });
+    }
+
     const data = await response.json();
-    res.status(200).json(data);
+    return res.status(200).json(data);
+
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Claude error:", err.message);
+    return res.status(500).json({ error: err.message });
   }
 }
