@@ -36,9 +36,10 @@ export default async function handler(req, res) {
     // ── Try Google first ─────────────────────────────────────
     const apiKey = process.env.GOOGLE_SEARCH_API_KEY;
     const cx     = process.env.GOOGLE_SEARCH_CX;
-    if (apiKey && cx) {
-      try {
-        const query = encodeURIComponent(`${latinName || plantName} plant`);
+  if (apiKey && cx) {
+  try {
+    console.log("Trying Google for:", plantName, "| key:", !!apiKey, "| cx:", !!cx);
+    const query = encodeURIComponent(`${latinName || plantName} plant`);
         const googleRes = await fetch(
           `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${query}&searchType=image&num=3&imgType=photo`
         );
